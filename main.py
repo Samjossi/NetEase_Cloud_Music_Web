@@ -6,10 +6,12 @@
 """
 
 import sys
+import os
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtCore import QUrl, QSize
 from PySide6.QtGui import QIcon
 from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWebEngineCore import QWebEngineProfile
 
 
 class NetEaseMusicWindow(QMainWindow):
@@ -27,6 +29,23 @@ class NetEaseMusicWindow(QMainWindow):
         
         # 创建网页视图
         self.web_view = QWebEngineView()
+        
+        # 精简的登录状态持久化配置
+        profile = self.web_view.page().profile()
+        
+        # 使用绝对路径确保目录能创建
+        login_data_path = os.path.abspath("./login_data")
+        os.makedirs(login_data_path, exist_ok=True)
+        
+        # 只保存登录相关的核心数据
+        profile.setPersistentStoragePath(login_data_path)
+        profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.AllowPersistentCookies)
+        
+        # 使用内存缓存，避免存储大量音频文件
+        profile.setHttpCacheType(QWebEngineProfile.HttpCacheType.MemoryHttpCache)
+        
+        # 调试信息
+        print(f"登录数据存储路径: {login_data_path}")
         
         # 加载网易云音乐播放器
         self.web_view.setUrl(QUrl("https://music.163.com/st/webplayer"))
