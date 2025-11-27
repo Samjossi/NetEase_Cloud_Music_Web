@@ -12,3 +12,5 @@ wheels/
 # WebEngine user data (contains login cookies and sessions)
 web_data/
 login_data/
+
+logs/
