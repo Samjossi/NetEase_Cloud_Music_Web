@@ -207,37 +207,6 @@ class NetEaseMusicWindow(QMainWindow):
         except Exception as e:
             self.logger.error(f"处理Cookie检查结果失败: {e}")
     
-    def setup_login_data_monitor(self, login_data_path):
-        """设置登录数据监控"""
-        try:
-            # 创建定时器，定期检查登录数据目录
-            self.login_monitor_timer = QTimer()
-            self.login_monitor_timer.timeout.connect(lambda: self.check_login_data(login_data_path))
-            self.login_monitor_timer.start(5000)  # 每5秒检查一次
-            
-            self.logger.debug("登录数据监控定时器已启动")
-        except Exception as e:
-            self.logger.error(f"设置登录数据监控失败: {e}")
-    
-    def check_login_data(self, login_data_path):
-        """检查登录数据目录的变化"""
-        try:
-            if os.path.exists(login_data_path):
-                files = os.listdir(login_data_path)
-                if files:
-                    for file in files:
-                        file_path = os.path.join(login_data_path, file)
-                        if os.path.isfile(file_path):
-                            size = os.path.getsize(file_path)
-                            log_login_operation("file_detected", file_path, True, f"文件大小: {size} 字节")
-                            
-                            # 如果是新的数据库文件，记录详细信息
-                            if file.endswith(('.db', '.sqlite', '.cookies')):
-                                self.logger.info(f"检测到登录数据文件: {file} ({size} 字节)")
-                                log_login_operation("database_file_created", file_path, True, 
-                                                 f"数据库文件大小: {size} 字节")
-        except Exception as e:
-            self.logger.error(f"检查登录数据失败: {e}")
     
     def setup_webview_monitoring(self):
         """设置WebView监控"""
@@ -290,11 +259,7 @@ class NetEaseMusicWindow(QMainWindow):
         self.logger.info("正在关闭应用窗口...")
         
         try:
-            # 停止所有定时器
-            if hasattr(self, 'login_monitor_timer'):
-                self.login_monitor_timer.stop()
-                self.logger.debug("登录数据监控定时器已停止")
-            
+            # 停止定时器（只保留新的增强监控定时器）
             if hasattr(self, 'enhanced_login_timer'):
                 self.enhanced_login_timer.stop()
                 self.logger.debug("增强登录监控定时器已停止")
