@@ -1,0 +1,102 @@
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :139  | 98154 | 131135082098816 | === 网易云音乐桌面版启动 ===
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :140  | 98154 | 131135082098816 | 日志系统初始化完成，级别: INFO
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :141  | 98154 | 131135082098816 | 日志目录: /home/afro/heavenly_kingdom/do_for_fun/NetEase_Cloud_Music_Web/logs
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :142  | 98154 | 131135082098816 | Python版本: 3.12.3 (main, Nov  6 2025, 13:44:16) [GCC 13.3.0]
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :143  | 98154 | 131135082098816 | 工作目录: /home/afro/heavenly_kingdom/do_for_fun/NetEase_Cloud_Music_Web
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.main    | main                :150  | 98154 | 131135082098816 | 日志系统初始化成功
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.main    | main                :162  | 98154 | 131135082098816 | 创建QApplication实例
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.main    | main                :170  | 98154 | 131135082098816 | 正在创建主窗口...
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.window  | __init__            :25   | 98154 | 131135082098816 | 正在初始化主窗口...
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.login   | log_login_data_operation:184  | 98154 | 131135082098816 | 登录数据操作成功: create_directory
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.login   | log_login_data_operation:184  | 98154 | 131135082098816 | 登录数据操作成功: set_persistent_storage
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.window  | init_ui             :71   | 98154 | 131135082098816 | 登录数据存储路径: /home/afro/heavenly_kingdom/do_for_fun/NetEase_Cloud_Music_Web/login_data
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98154 | 131135082098816 | WebView事件: load_url
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.window  | __init__            :30   | 98154 | 131135082098816 | 主窗口初始化完成
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.main    | main                :175  | 98154 | 131135082098816 | 主窗口显示完成
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.performance | log_startup_performance:175  | 98154 | 131135082098816 | 应用启动耗时: 0.380秒
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.main    | main                :181  | 98154 | 131135082098816 | 开始运行应用主循环
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_started     :114  | 98154 | 131135082098816 | 页面开始加载: https://music.163.com/st/webplayer
+2025-11-27 13:58:01.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98154 | 131135082098816 | WebView事件: load_started
+2025-11-27 13:58:03.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_finished    :121  | 98154 | 131135082098816 | 页面加载成功: https://music.163.com/st/webplayer
+2025-11-27 13:58:03.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98154 | 131135082098816 | WebView事件: load_finished
+2025-11-27 13:58:03.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_started     :114  | 98154 | 131135082098816 | 页面开始加载: https://music.163.com/st/webplayer
+2025-11-27 13:58:03.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98154 | 131135082098816 | WebView事件: load_started
+2025-11-27 13:58:07.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_finished    :121  | 98154 | 131135082098816 | 页面加载成功: https://music.163.com/#/login?targetUrl=https%3A%2F%2Fmusic.163.com%2Fst%2Fwebplayer
+2025-11-27 13:58:07.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98154 | 131135082098816 | WebView事件: load_finished
+2025-11-27 13:58:17.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_started     :114  | 98154 | 131135082098816 | 页面开始加载: https://music.163.com/#/login?targetUrl=https%3A%2F%2Fmusic.163.com%2Fst%2Fwebplayer
+2025-11-27 13:58:17.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98154 | 131135082098816 | WebView事件: load_started
+2025-11-27 13:58:18.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_finished    :121  | 98154 | 131135082098816 | 页面加载成功: https://music.163.com/st/webplayer
+2025-11-27 13:58:18.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98154 | 131135082098816 | WebView事件: load_finished
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :139  | 98659 | 134430427639936 | === 网易云音乐桌面版启动 ===
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :140  | 98659 | 134430427639936 | 日志系统初始化完成，级别: INFO
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :141  | 98659 | 134430427639936 | 日志目录: /home/afro/heavenly_kingdom/do_for_fun/NetEase_Cloud_Music_Web/logs
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :142  | 98659 | 134430427639936 | Python版本: 3.12.3 (main, Nov  6 2025, 13:44:16) [GCC 13.3.0]
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :143  | 98659 | 134430427639936 | 工作目录: /home/afro/heavenly_kingdom/do_for_fun/NetEase_Cloud_Music_Web
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.main    | main                :150  | 98659 | 134430427639936 | 日志系统初始化成功
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.main    | main                :162  | 98659 | 134430427639936 | 创建QApplication实例
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.main    | main                :170  | 98659 | 134430427639936 | 正在创建主窗口...
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.window  | __init__            :25   | 98659 | 134430427639936 | 正在初始化主窗口...
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.login   | log_login_data_operation:184  | 98659 | 134430427639936 | 登录数据操作成功: create_directory
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.login   | log_login_data_operation:184  | 98659 | 134430427639936 | 登录数据操作成功: set_persistent_storage
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.window  | init_ui             :71   | 98659 | 134430427639936 | 登录数据存储路径: /home/afro/heavenly_kingdom/do_for_fun/NetEase_Cloud_Music_Web/login_data
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98659 | 134430427639936 | WebView事件: load_url
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.window  | __init__            :30   | 98659 | 134430427639936 | 主窗口初始化完成
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.main    | main                :175  | 98659 | 134430427639936 | 主窗口显示完成
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.performance | log_startup_performance:175  | 98659 | 134430427639936 | 应用启动耗时: 0.255秒
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.main    | main                :181  | 98659 | 134430427639936 | 开始运行应用主循环
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_started     :114  | 98659 | 134430427639936 | 页面开始加载: https://music.163.com/st/webplayer
+2025-11-27 13:59:04.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98659 | 134430427639936 | WebView事件: load_started
+2025-11-27 13:59:06.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_finished    :121  | 98659 | 134430427639936 | 页面加载成功: https://music.163.com/st/webplayer
+2025-11-27 13:59:06.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98659 | 134430427639936 | WebView事件: load_finished
+2025-11-27 13:59:06.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_started     :114  | 98659 | 134430427639936 | 页面开始加载: https://music.163.com/st/webplayer
+2025-11-27 13:59:06.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98659 | 134430427639936 | WebView事件: load_started
+2025-11-27 13:59:10.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_finished    :121  | 98659 | 134430427639936 | 页面加载成功: https://music.163.com/#/login?targetUrl=https%3A%2F%2Fmusic.163.com%2Fst%2Fwebplayer
+2025-11-27 13:59:10.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98659 | 134430427639936 | WebView事件: load_finished
+2025-11-27 13:59:11.%f | [32mINFO[0m | NetEaseMusic.window  | closeEvent          :135  | 98154 | 131135082098816 | 正在关闭应用窗口...
+2025-11-27 13:59:11.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98154 | 131135082098816 | WebView事件: window_close
+2025-11-27 13:59:11.%f | [32mINFO[0m | startup              | cleanup_on_exit     :63   | 98154 | 131135082098816 | 正在清理启动脚本资源...
+2025-11-27 13:59:20.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_started     :114  | 98659 | 134430427639936 | 页面开始加载: https://music.163.com/#/login?targetUrl=https%3A%2F%2Fmusic.163.com%2Fst%2Fwebplayer
+2025-11-27 13:59:20.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98659 | 134430427639936 | WebView事件: load_started
+2025-11-27 13:59:20.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_finished    :121  | 98659 | 134430427639936 | 页面加载成功: https://music.163.com/st/webplayer
+2025-11-27 13:59:20.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98659 | 134430427639936 | WebView事件: load_finished
+2025-11-27 13:59:35.%f | [32mINFO[0m | NetEaseMusic.window  | closeEvent          :135  | 98659 | 134430427639936 | 正在关闭应用窗口...
+2025-11-27 13:59:35.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 98659 | 134430427639936 | WebView事件: window_close
+2025-11-27 13:59:35.%f | [32mINFO[0m | startup              | cleanup_on_exit     :63   | 98659 | 134430427639936 | 正在清理启动脚本资源...
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :139  | 99168 | 124749158453376 | === 网易云音乐桌面版启动 ===
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :140  | 99168 | 124749158453376 | 日志系统初始化完成，级别: INFO
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :141  | 99168 | 124749158453376 | 日志目录: /home/afro/heavenly_kingdom/do_for_fun/NetEase_Cloud_Music_Web/logs
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :142  | 99168 | 124749158453376 | Python版本: 3.12.3 (main, Nov  6 2025, 13:44:16) [GCC 13.3.0]
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.system  | setup_logging       :143  | 99168 | 124749158453376 | 工作目录: /home/afro/heavenly_kingdom/do_for_fun/NetEase_Cloud_Music_Web
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.main    | main                :200  | 99168 | 124749158453376 | 日志系统初始化成功
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.main    | main                :212  | 99168 | 124749158453376 | 创建QApplication实例
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.main    | main                :220  | 99168 | 124749158453376 | 正在创建主窗口...
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.window  | __init__            :25   | 99168 | 124749158453376 | 正在初始化主窗口...
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.login   | log_login_data_operation:184  | 99168 | 124749158453376 | 登录数据操作成功: create_directory
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.login   | log_login_data_operation:184  | 99168 | 124749158453376 | 登录数据操作成功: set_persistent_storage
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.window  | init_ui             :71   | 99168 | 124749158453376 | 登录数据存储路径: /home/afro/heavenly_kingdom/do_for_fun/NetEase_Cloud_Music_Web/login_data
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 99168 | 124749158453376 | WebView事件: load_url
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.window  | __init__            :30   | 99168 | 124749158453376 | 主窗口初始化完成
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.main    | main                :225  | 99168 | 124749158453376 | 主窗口显示完成
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.performance | log_startup_performance:175  | 99168 | 124749158453376 | 应用启动耗时: 0.246秒
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.main    | main                :231  | 99168 | 124749158453376 | 开始运行应用主循环
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_started     :149  | 99168 | 124749158453376 | 页面开始加载: https://music.163.com/st/webplayer
+2025-11-27 14:00:56.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 99168 | 124749158453376 | WebView事件: load_started
+2025-11-27 14:00:58.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_finished    :161  | 99168 | 124749158453376 | 页面加载成功: https://music.163.com/st/webplayer
+2025-11-27 14:00:58.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 99168 | 124749158453376 | WebView事件: load_finished
+2025-11-27 14:00:58.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_finished    :166  | 99168 | 124749158453376 | 可能登录成功，跳转到: https://music.163.com/st/webplayer
+2025-11-27 14:00:58.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 99168 | 124749158453376 | WebView事件: possible_login_success
+2025-11-27 14:00:58.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_started     :149  | 99168 | 124749158453376 | 页面开始加载: https://music.163.com/st/webplayer
+2025-11-27 14:00:58.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 99168 | 124749158453376 | WebView事件: load_started
+2025-11-27 14:01:02.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_finished    :161  | 99168 | 124749158453376 | 页面加载成功: https://music.163.com/#/login?targetUrl=https%3A%2F%2Fmusic.163.com%2Fst%2Fwebplayer
+2025-11-27 14:01:02.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 99168 | 124749158453376 | WebView事件: load_finished
+2025-11-27 14:01:12.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_started     :149  | 99168 | 124749158453376 | 页面开始加载: https://music.163.com/#/login?targetUrl=https%3A%2F%2Fmusic.163.com%2Fst%2Fwebplayer
+2025-11-27 14:01:12.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 99168 | 124749158453376 | WebView事件: load_started
+2025-11-27 14:01:12.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_started     :154  | 99168 | 124749158453376 | 检测到登录页面: https://music.163.com/#/login?targetUrl=https%3A%2F%2Fmusic.163.com%2Fst%2Fwebplayer
+2025-11-27 14:01:12.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 99168 | 124749158453376 | WebView事件: login_page_detected
+2025-11-27 14:01:13.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_finished    :161  | 99168 | 124749158453376 | 页面加载成功: https://music.163.com/st/webplayer
+2025-11-27 14:01:13.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 99168 | 124749158453376 | WebView事件: load_finished
+2025-11-27 14:01:13.%f | [32mINFO[0m | NetEaseMusic.window  | on_load_finished    :166  | 99168 | 124749158453376 | 可能登录成功，跳转到: https://music.163.com/st/webplayer
+2025-11-27 14:01:13.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 99168 | 124749158453376 | WebView事件: possible_login_success
+2025-11-27 14:01:24.%f | [32mINFO[0m | NetEaseMusic.window  | closeEvent          :180  | 99168 | 124749158453376 | 正在关闭应用窗口...
+2025-11-27 14:01:24.%f | [32mINFO[0m | NetEaseMusic.webview | log_webview_event   :200  | 99168 | 124749158453376 | WebView事件: window_close
+2025-11-27 14:01:24.%f | [32mINFO[0m | startup              | cleanup_on_exit     :63   | 99168 | 124749158453376 | 正在清理启动脚本资源...
