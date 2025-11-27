@@ -14,3 +14,5 @@ web_data/
 login_data/
 
 logs/
+login_data/
+login_data_backup_shutdown/
