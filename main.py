@@ -25,8 +25,12 @@ class NetEaseMusicWindow(QMainWindow):
         self.logger = get_logger("window")
         self.logger.info("正在初始化主窗口...")
         
+        # 初始化窗口状态管理
+        self.window_save_timer = None  # 延迟保存定时器
+        
         self.init_ui()
         self.setup_webview_monitoring()
+        self.load_window_settings()
         
         self.logger.info("主窗口初始化完成")
         
@@ -244,15 +248,197 @@ class NetEaseMusicWindow(QMainWindow):
             if 'login' not in url.lower() and 'music.163.com' in url:
                 self.logger.info(f"可能登录成功，跳转到: {url}")
                 log_webview_event("possible_login_success", url, True, "可能登录成功")
+            
+            # 验证 localStorage 配置和音量设置
+            if 'music.163.com' in url:
+                self.verify_localstorage_and_volume()
         else:
             self.logger.error(f"页面加载失败: {url}")
             log_webview_event("load_finished", url, False, "页面加载失败")
+    
+    def verify_localstorage_and_volume(self):
+        """验证 localStorage 配置和音量设置"""
+        try:
+            # 延迟执行，确保页面完全加载
+            QTimer.singleShot(2000, self._check_localstorage_and_volume)
+        except Exception as e:
+            self.logger.error(f"验证 localStorage 和音量设置失败: {e}")
+    
+    def _check_localstorage_and_volume(self):
+        """检查 localStorage 和音量设置"""
+        try:
+            js_code = """
+            (function() {
+                try {
+                    // 检查 localStorage 是否可用
+                    var localStorageAvailable = typeof(Storage) !== "undefined" && window.localStorage !== null;
+                    
+                    var volumeInfo = {
+                        localStorageAvailable: localStorageAvailable,
+                        volumeSettings: {}
+                    };
+                    
+                    if (localStorageAvailable) {
+                        try {
+                            // 检查网易云音乐可能存储的音量相关键值
+                            var volumeKeys = ['volume', 'playerVolume', 'musicVolume', 'netease_volume'];
+                            
+                            for (var i = 0; i < volumeKeys.length; i++) {
+                                var key = volumeKeys[i];
+                                if (localStorage.getItem(key) !== null) {
+                                    volumeInfo.volumeSettings[key] = localStorage.getItem(key);
+                                }
+                            }
+                            
+                            // 检查是否有其他可能的设置键
+                            var allKeys = Object.keys(localStorage);
+                            volumeInfo.allKeys = allKeys;
+                            volumeInfo.totalKeys = allKeys.length;
+                            
+                        } catch (e) {
+                            volumeInfo.error = "localStorage access error: " + e.message;
+                        }
+                    } else {
+                        volumeInfo.error = "localStorage not available";
+                    }
+                    
+                    return volumeInfo;
+                    
+                } catch (e) {
+                    return {
+                        error: "Check failed: " + e.message,
+                        localStorageAvailable: false
+                    };
+                }
+            })();
+            """
+            
+            self.web_view.page().runJavaScript(js_code, self.on_localstorage_check_result)
+            
+        except Exception as e:
+            self.logger.error(f"执行 localStorage 检查失败: {e}")
+    
+    def on_localstorage_check_result(self, result):
+        """处理 localStorage 检查结果"""
+        try:
+            if not result:
+                self.logger.warning("localStorage 检查返回空结果")
+                return
+            
+            if isinstance(result, dict):
+                if result.get("localStorageAvailable"):
+                    self.logger.info("✓ localStorage 可用，配置正确")
+                    
+                    volume_settings = result.get("volumeSettings", {})
+                    if volume_settings:
+                        self.logger.info(f"检测到音量相关设置: {list(volume_settings.keys())}")
+                        for key, value in volume_settings.items():
+                            self.logger.debug(f"  {key}: {value}")
+                    else:
+                        self.logger.debug("未检测到音量相关设置")
+                    
+                    all_keys = result.get("allKeys", [])
+                    total_keys = result.get("totalKeys", 0)
+                    self.logger.info(f"localStorage 总键数: {total_keys}")
+                    
+                    # 记录所有键（调试用）
+                    if total_keys > 0 and total_keys <= 20:  # 避免日志过多
+                        self.logger.debug(f"所有 localStorage 键: {all_keys}")
+                    
+                else:
+                    error_msg = result.get("error", "未知错误")
+                    self.logger.warning(f"localStorage 不可用或配置错误: {error_msg}")
+                    
+        except Exception as e:
+            self.logger.error(f"处理 localStorage 检查结果失败: {e}")
     
     def on_title_changed(self, title):
         """页面标题变化"""
         self.logger.debug(f"页面标题变化: {title}")
         if title:
             self.setWindowTitle(f"网易云音乐 - {title}")
+    
+    def load_window_settings(self):
+        """加载窗口设置"""
+        try:
+            if not hasattr(self, 'profile_manager') or not self.profile_manager:
+                self.logger.warning("Profile管理器未初始化，跳过窗口设置加载")
+                return
+            
+            window_data = self.profile_manager.load_window_geometry()
+            
+            if window_data["valid"] and window_data["geometry"]:
+                # 恢复窗口几何信息
+                self.restoreGeometry(window_data["geometry"])
+                
+                # 恢复最大化状态
+                if window_data["maximized"]:
+                    self.showMaximized()
+                
+                self.logger.info(f"窗口设置加载成功，保存时间: {window_data['last_saved']}")
+            else:
+                self.logger.debug("未找到有效的窗口设置，使用默认设置")
+                
+        except Exception as e:
+            self.logger.error(f"加载窗口设置失败: {e}")
+    
+    def save_window_settings(self):
+        """保存窗口设置"""
+        try:
+            if not hasattr(self, 'profile_manager') or not self.profile_manager:
+                self.logger.warning("Profile管理器未初始化，跳过窗口设置保存")
+                return
+            
+            # 获取当前窗口几何信息
+            geometry_qbytearray = self.saveGeometry()
+            maximized = self.isMaximized()
+            
+            # 转换QByteArray为bytes
+            geometry_bytes = geometry_qbytearray.data()
+            
+            # 保存到ProfileManager
+            success = self.profile_manager.save_window_geometry(geometry_bytes, maximized)
+            
+            if success:
+                self.logger.debug("窗口设置保存成功")
+            else:
+                self.logger.warning("窗口设置保存失败")
+                
+        except Exception as e:
+            self.logger.error(f"保存窗口设置失败: {e}")
+    
+    def schedule_save_window_settings(self):
+        """延迟保存窗口设置（避免频繁保存）"""
+        try:
+            # 如果定时器不存在，创建它
+            if self.window_save_timer is None:
+                self.window_save_timer = QTimer()
+                self.window_save_timer.setSingleShot(True)
+                self.window_save_timer.timeout.connect(self.save_window_settings)
+            
+            # 重新启动定时器（延迟1秒保存）
+            self.window_save_timer.start(1000)
+            
+        except Exception as e:
+            self.logger.error(f"调度窗口设置保存失败: {e}")
+    
+    def resizeEvent(self, event):
+        """窗口大小变化事件"""
+        super().resizeEvent(event)
+        self.schedule_save_window_settings()
+    
+    def moveEvent(self, event):
+        """窗口位置变化事件"""
+        super().moveEvent(event)
+        self.schedule_save_window_settings()
+    
+    def changeEvent(self, event):
+        """窗口状态变化事件（包括最大化/最小化）"""
+        super().changeEvent(event)
+        
+        # 检查是否是窗口状态变化
+        if event.type() == event.Type.WindowStateChange:
+            self.schedule_save_window_settings()
     
     def closeEvent(self, event):
         """窗口关闭事件"""

@@ -8,6 +8,8 @@ WebEngine Profile管理器
 import os
 import sys
 import time
+import json
+import base64
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -101,8 +103,7 @@ class ProfileManager:
             settings = self.profile.settings()
             if settings:
                 settings.setAttribute(settings.WebAttribute.LocalStorageEnabled, True)
-                settings.setAttribute(settings.WebAttribute.SessionStorageEnabled, True)
-                self.logger.debug("启用本地存储和会话存储")
+                self.logger.debug("启用本地存储")
             
         except Exception as e:
             self.logger.warning(f"配置Profile设置失败: {e}")
@@ -246,6 +247,12 @@ class ProfileManager:
                 self.logger.warning("没有数据需要备份")
                 return False
             
+            # 如果备份已存在，先删除
+            if os.path.exists(backup_path):
+                import shutil
+                shutil.rmtree(backup_path)
+                self.logger.debug(f"删除已存在的备份目录: {backup_path}")
+            
             import shutil
             shutil.copytree(self.storage_path, backup_path)
             
@@ -282,6 +289,102 @@ class ProfileManager:
             self.logger.error(f"恢复登录数据失败: {e}")
             return False
     
+    def get_window_settings_path(self) -> str:
+        """获取窗口设置文件路径"""
+        return os.path.join(self.storage_path, "window_settings.json")
+    
+    def save_window_geometry(self, geometry_bytes: bytes, maximized: bool = False) -> bool:
+        """保存窗口几何信息"""
+        try:
+            settings_path = self.get_window_settings_path()
+            
+            # 将几何数据编码为base64字符串
+            geometry_b64 = base64.b64encode(geometry_bytes).decode('utf-8')
+            
+            window_settings = {
+                "geometry": geometry_b64,
+                "maximized": maximized,
+                "last_saved": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "version": "1.0"
+            }
+            
+            # 原子写入，避免文件损坏
+            temp_path = settings_path + ".tmp"
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json.dump(window_settings, f, indent=2, ensure_ascii=False)
+            
+            os.replace(temp_path, settings_path)
+            
+            self.logger.debug(f"窗口几何信息已保存: {settings_path}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"保存窗口几何信息失败: {e}")
+            return False
+    
+    def load_window_geometry(self) -> Dict[str, Any]:
+        """加载窗口几何信息"""
+        try:
+            settings_path = self.get_window_settings_path()
+            
+            if not os.path.exists(settings_path):
+                self.logger.debug("窗口设置文件不存在，返回默认设置")
+                return {
+                    "geometry": None,
+                    "maximized": False,
+                    "valid": False
+                }
+            
+            with open(settings_path, 'r', encoding='utf-8') as f:
+                window_settings = json.load(f)
+            
+            # 验证数据完整性
+            if not all(key in window_settings for key in ["geometry", "maximized"]):
+                self.logger.warning("窗口设置文件格式不完整")
+                return {
+                    "geometry": None,
+                    "maximized": False,
+                    "valid": False
+                }
+            
+            # 解码几何数据
+            geometry_bytes = base64.b64decode(window_settings["geometry"].encode('utf-8'))
+            
+            result = {
+                "geometry": geometry_bytes,
+                "maximized": window_settings.get("maximized", False),
+                "valid": True,
+                "last_saved": window_settings.get("last_saved", "unknown")
+            }
+            
+            self.logger.debug(f"窗口几何信息加载成功，保存时间: {result['last_saved']}")
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"加载窗口几何信息失败: {e}")
+            return {
+                "geometry": None,
+                "maximized": False,
+                "valid": False
+            }
+    
+    def reset_window_settings(self) -> bool:
+        """重置窗口设置"""
+        try:
+            settings_path = self.get_window_settings_path()
+            
+            if os.path.exists(settings_path):
+                os.remove(settings_path)
+                self.logger.info("窗口设置已重置")
+            else:
+                self.logger.debug("窗口设置文件不存在，无需重置")
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"重置窗口设置失败: {e}")
+            return False
+
     def get_profile(self) -> Optional[QWebEngineProfile]:
         """获取Profile实例"""
         return self.profile
