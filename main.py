@@ -79,9 +79,7 @@ def main():
             app_logger.warning(f"设置应用程序图标失败: {e}")
         
         # 设置应用信息
-        app.setApplicationName("网易云音乐桌面版")
-        app.setApplicationDisplayName("网易云音乐桌面版")
-        app.setOrganizationName("NetEase Music Desktop")
+        app.setOrganizationName("NetEase")
         app.setOrganizationDomain("netease.com")
         
         # 设置GNOME兼容的窗口类名（WM_CLASS）
