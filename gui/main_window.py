@@ -39,8 +39,8 @@ class NetEaseMusicWindow(QMainWindow):
         """初始化用户界面"""
         try:
             # 设置窗口标题
-            self.setWindowTitle("网易云音乐")
-            self.logger.debug("设置窗口标题: 网易云音乐")
+            self.setWindowTitle("网易云音乐 - 网页封装版")
+            self.logger.debug("设置窗口标题: 网易云音乐 - 网页封装版")
             
             # 设置窗口大小 (适合播放器的尺寸)
             self.resize(1200, 800)

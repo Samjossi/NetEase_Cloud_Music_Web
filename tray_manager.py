@@ -90,6 +90,15 @@ class TrayManager(QObject):
     
     def _get_qt_icon(self) -> Optional[QIcon]:
         """获取Qt图标对象"""
+        # 处理PyInstaller打包后的路径
+        import sys
+        if hasattr(sys, '_MEIPASS'):
+            # PyInstaller打包环境
+            base_path = sys._MEIPASS
+        else:
+            # 开发环境
+            base_path = os.getcwd()
+        
         # 优先使用适合托盘显示的图标尺寸，按推荐顺序排列
         icon_paths = [
             "icon/icon_32x32.png",    # 托盘图标推荐尺寸
@@ -101,9 +110,10 @@ class TrayManager(QObject):
         ]
         
         for path in icon_paths:
-            if os.path.exists(path):
-                self.logger.debug(f"找到托盘图标: {path}")
-                return QIcon(path)
+            full_path = os.path.join(base_path, path)
+            if os.path.exists(full_path):
+                self.logger.debug(f"找到托盘图标: {full_path}")
+                return QIcon(full_path)
         
         self.logger.warning("未找到合适的托盘图标文件")
         return None
