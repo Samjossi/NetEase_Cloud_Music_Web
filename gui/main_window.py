@@ -79,8 +79,9 @@ class NetEaseMusicWindow(QMainWindow):
                 else:
                     base_path = os.getcwd()
                 
-                # Linux桌面环境推荐的图标尺寸顺序
+                # Linux桌面环境推荐的图标尺寸顺序（针对GNOME优化）
                 icon_paths = [
+                    "icon/icon_48x48.png",    # GNOME任务栏标准尺寸
                     "icon/icon_64x64.png",    # 标准桌面图标尺寸
                     "icon/icon_32x32.png",    # 小尺寸图标
                     "icon/icon_128x128.png",  # 高DPI显示器

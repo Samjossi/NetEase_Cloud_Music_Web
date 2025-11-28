@@ -50,8 +50,9 @@ def main():
             else:
                 base_path = os.getcwd()
             
-            # Linux桌面环境推荐的图标尺寸顺序
+            # Linux桌面环境推荐的图标尺寸顺序（针对GNOME优化）
             icon_paths = [
+                "icon/icon_48x48.png",    # GNOME任务栏标准尺寸
                 "icon/icon_64x64.png",    # 标准桌面图标尺寸
                 "icon/icon_32x32.png",    # 小尺寸图标
                 "icon/icon_128x128.png",  # 高DPI显示器
@@ -79,7 +80,13 @@ def main():
         
         # 设置应用信息
         app.setApplicationName("网易云音乐桌面版")
+        app.setApplicationDisplayName("网易云音乐桌面版")
         app.setOrganizationName("NetEase Music Desktop")
+        app.setOrganizationDomain("netease.com")
+        
+        # 设置GNOME兼容的窗口类名（WM_CLASS）
+        app.setDesktopFileName("netease-music-desktop")
+        
         app_logger.debug("设置应用信息完成")
         
         # 创建主窗口
