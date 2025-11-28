@@ -1,2 +1,1 @@
 PySide6>=6.5.0
-PyGObject>=3.42.0

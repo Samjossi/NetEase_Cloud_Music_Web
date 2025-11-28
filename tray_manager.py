@@ -2,36 +2,21 @@
 # -*- coding: utf-8 -*-
 """
 系统托盘管理器
-为网易云音乐桌面版提供系统托盘功能
-支持AppIndicator3和Qt QSystemTrayIcon两种实现方案
+为网易云音乐桌面版提供纯Qt系统托盘功能
 """
 
 import os
-import sys
-import time
-from typing import Optional, Callable
+from typing import Optional
 from PySide6.QtWidgets import QSystemTrayIcon, QMenu
 from PySide6.QtCore import QObject, Signal, QTimer
 from PySide6.QtGui import QIcon, QAction
-
-# AppIndicator3 导入和检测
-try:
-    import gi
-    gi.require_version('AppIndicator3', '0.1')
-    from gi.repository import AppIndicator3 as appindicator
-    from gi.repository import Gtk as gtk
-    APPINDICATOR_AVAILABLE = True
-except (ImportError, ValueError):
-    APPINDICATOR_AVAILABLE = False
-    appindicator = None
-    gtk = None
 
 # 导入日志系统
 from logger import get_logger
 
 
 class TrayManager(QObject):
-    """系统托盘管理器"""
+    """系统托盘管理器 - 纯Qt实现"""
     
     # 信号定义
     show_window_requested = Signal()
@@ -44,7 +29,6 @@ class TrayManager(QObject):
         
         # 托盘相关属性
         self.is_visible = False
-        self.appindicator = None
         self.qt_tray = None
         self.song_update_timer = None
         self.current_song_info = "网易云音乐"
@@ -52,74 +36,34 @@ class TrayManager(QObject):
         # 初始化托盘
         self._init_tray()
         
-        self.logger.info(f"系统托盘管理器初始化完成，使用: {'AppIndicator3' if APPINDICATOR_AVAILABLE else 'Qt QSystemTrayIcon'}")
+        self.logger.info("系统托盘管理器初始化完成，使用: Qt QSystemTrayIcon")
     
     def _init_tray(self):
-        """初始化系统托盘"""
-        try:
-            if APPINDICATOR_AVAILABLE:
-                self._init_appindicator()
-            else:
-                self._init_qt_tray()
-                
-            self.is_visible = True
-            
-            # 启动歌曲信息更新定时器
-            self._start_song_update_timer()
-            
-        except Exception as e:
-            self.logger.error(f"初始化系统托盘失败: {e}", exc_info=True)
-            raise
-    
-    def _init_appindicator(self):
-        """初始化AppIndicator3托盘"""
-        try:
-            # 创建应用指示器
-            self.appindicator = appindicator.Indicator.new(
-                "netease-music-desktop",
-                "netease-music",
-                appindicator.IndicatorCategory.APPLICATION_STATUS
-            )
-            
-            # 设置图标
-            icon_path = self._get_icon_path()
-            if icon_path and os.path.exists(icon_path):
-                self.appindicator.set_icon_theme_path(os.path.dirname(icon_path))
-                self.appindicator.set_icon_full(os.path.basename(icon_path), "网易云音乐")
-            else:
-                self.appindicator.set_icon("netease-music")
-            
-            # 设置状态
-            self.appindicator.set_status(appindicator.IndicatorStatus.ACTIVE)
-            
-            # 创建菜单
-            menu = self._create_appindicator_menu()
-            self.appindicator.set_menu(menu)
-            
-            # 设置点击事件（左键显示/隐藏窗口）
-            # AppIndicator3 不直接支持左键点击，我们在菜单中提供显示/隐藏选项
-            
-            self.logger.info("AppIndicator3托盘初始化成功")
-            
-        except Exception as e:
-            self.logger.error(f"AppIndicator3初始化失败: {e}", exc_info=True)
-            # 如果AppIndicator3初始化失败，尝试Qt方案
-            self._init_qt_tray()
-    
-    def _init_qt_tray(self):
         """初始化Qt系统托盘"""
         try:
+            # 检查系统是否支持托盘
+            if not QSystemTrayIcon.isSystemTrayAvailable():
+                raise RuntimeError("系统不支持系统托盘功能")
+            
             self.qt_tray = QSystemTrayIcon(self.parent())
             
             # 设置图标
             icon = self._get_qt_icon()
             if icon:
                 self.qt_tray.setIcon(icon)
+                self.logger.debug("使用自定义图标")
             else:
-                # 使用默认图标
-                self.qt_tray.setIcon(self.qt_tray.style().standardIcon(
-                    self.qt_tray.style().StandardPixmap.SP_MediaVolume
-                ))
+                # 创建一个简单的默认图标
+                from PySide6.QtWidgets import QApplication, QWidget
+                app = QApplication.instance()
+                if app:
+                    widget = QWidget()
+                    default_icon = widget.style().standardIcon(
+                        widget.style().StandardPixmap.SP_MediaVolume
+                    )
+                    self.qt_tray.setIcon(default_icon)
+                    widget.deleteLater()
+                self.logger.debug("使用默认图标")
             
             # 创建菜单
             menu = self._create_qt_menu()
@@ -133,6 +77,10 @@ class TrayManager(QObject):
             
             # 显示托盘
             self.qt_tray.show()
+            self.is_visible = True
+            
+            # 启动歌曲信息更新定时器
+            self._start_song_update_timer()
             
             self.logger.info("Qt系统托盘初始化成功")
             
@@ -140,8 +88,8 @@ class TrayManager(QObject):
             self.logger.error(f"Qt系统托盘初始化失败: {e}", exc_info=True)
             raise
     
-    def _get_icon_path(self) -> Optional[str]:
-        """获取托盘图标路径"""
+    def _get_qt_icon(self) -> Optional[QIcon]:
+        """获取Qt图标对象"""
         # 尝试多种图标尺寸
         icon_paths = [
             "icon/icon_16x16.png",
@@ -154,42 +102,10 @@ class TrayManager(QObject):
         for path in icon_paths:
             if os.path.exists(path):
                 self.logger.debug(f"找到托盘图标: {path}")
-                return path
+                return QIcon(path)
         
         self.logger.warning("未找到合适的托盘图标文件")
         return None
-    
-    def _get_qt_icon(self) -> Optional[QIcon]:
-        """获取Qt图标对象"""
-        icon_path = self._get_icon_path()
-        if icon_path and os.path.exists(icon_path):
-            return QIcon(icon_path)
-        return None
-    
-    def _create_appindicator_menu(self) -> 'gtk.Menu':
-        """创建AppIndicator3右键菜单"""
-        try:
-            menu = gtk.Menu()
-            
-            # 显示/隐藏窗口菜单项
-            show_hide_item = gtk.MenuItem("显示/隐藏窗口")
-            show_hide_item.connect("activate", self._on_appindicator_show_hide)
-            menu.append(show_hide_item)
-            
-            # 分隔线
-            menu.append(gtk.SeparatorMenuItem())
-            
-            # 退出程序菜单项
-            exit_item = gtk.MenuItem("退出程序")
-            exit_item.connect("activate", self._on_appindicator_exit)
-            menu.append(exit_item)
-            
-            menu.show_all()
-            return menu
-            
-        except Exception as e:
-            self.logger.error(f"创建AppIndicator3菜单失败: {e}", exc_info=True)
-            raise
     
     def _create_qt_menu(self) -> QMenu:
         """创建Qt右键菜单"""
@@ -222,14 +138,6 @@ class TrayManager(QObject):
         elif reason == QSystemTrayIcon.ActivationReason.Context:  # 右键点击
             # 菜单会自动显示，无需额外处理
             pass
-    
-    def _on_appindicator_show_hide(self, widget):
-        """AppIndicator3显示/隐藏窗口回调"""
-        self.show_window_requested.emit()
-    
-    def _on_appindicator_exit(self, widget):
-        """AppIndicator3退出程序回调"""
-        self.exit_requested.emit()
     
     def _on_qt_show_hide(self):
         """Qt显示/隐藏窗口回调"""
@@ -378,12 +286,7 @@ class TrayManager(QObject):
     def _update_tray_display(self):
         """更新托盘显示信息"""
         try:
-            if self.appindicator:
-                # AppIndicator3更新标题
-                self.appindicator.set_title(self.current_song_info)
-                self.appindicator.set_label(self.current_song_info[:30], "")
-                
-            elif self.qt_tray:
+            if self.qt_tray:
                 # Qt托盘更新工具提示
                 self.qt_tray.setToolTip(self.current_song_info)
                 
@@ -413,11 +316,6 @@ class TrayManager(QObject):
                 self.song_update_timer.stop()
                 self.song_update_timer = None
             
-            # 清理AppIndicator3
-            if self.appindicator:
-                self.appindicator.set_status(appindicator.IndicatorStatus.PASSIVE)
-                self.appindicator = None
-            
             # 清理Qt托盘
             if self.qt_tray:
                 self.qt_tray.hide()
@@ -432,14 +330,12 @@ class TrayManager(QObject):
 
 def is_tray_supported() -> bool:
     """检查系统是否支持托盘功能"""
-    return APPINDICATOR_AVAILABLE or QSystemTrayIcon.isSystemTrayAvailable()
+    return QSystemTrayIcon.isSystemTrayAvailable()
 
 
 def get_tray_backend() -> str:
     """获取当前使用的托盘后端"""
-    if APPINDICATOR_AVAILABLE:
-        return "AppIndicator3"
-    elif QSystemTrayIcon.isSystemTrayAvailable():
+    if QSystemTrayIcon.isSystemTrayAvailable():
         return "Qt QSystemTrayIcon"
     else:
         return "None"
