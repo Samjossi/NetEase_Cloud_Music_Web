@@ -18,6 +18,9 @@ from PySide6.QtWebEngineCore import QWebEngineProfile
 from logger import init_logging, get_logger, log_login_operation, log_webview_event, log_startup_performance
 from profile_manager import get_profile_manager, cleanup_profile_manager
 
+# 导入系统托盘管理器
+from tray_manager import TrayManager, is_tray_supported, get_tray_backend
+
 
 class NetEaseMusicWindow(QMainWindow):
     def __init__(self):
@@ -84,10 +87,78 @@ class NetEaseMusicWindow(QMainWindow):
                     self.logger.warning(f"图标文件不存在: {icon_path}")
             except Exception as e:
                 self.logger.warning(f"设置窗口图标失败: {e}")
+            
+            # 初始化系统托盘
+            self.setup_system_tray()
                 
         except Exception as e:
             self.logger.error(f"初始化用户界面失败: {e}", exc_info=True)
             raise
+    
+    def setup_system_tray(self):
+        """设置系统托盘功能"""
+        try:
+            # 检查系统是否支持托盘
+            if not is_tray_supported():
+                self.logger.warning("系统不支持托盘功能")
+                return
+            
+            self.logger.info(f"正在初始化系统托盘，使用后端: {get_tray_backend()}")
+            
+            # 创建托盘管理器
+            self.tray_manager = TrayManager(self)
+            
+            # 设置WebView实例给托盘管理器（用于获取歌曲信息）
+            if hasattr(self, 'web_view') and self.web_view:
+                self.tray_manager.set_webview(self.web_view)
+            
+            # 连接托盘信号
+            self.tray_manager.show_window_requested.connect(self.show_window)
+            self.tray_manager.exit_requested.connect(self.exit_application)
+            
+            self.logger.info("系统托盘初始化成功")
+            
+        except Exception as e:
+            self.logger.error(f"设置系统托盘失败: {e}", exc_info=True)
+            # 托盘功能失败不应该阻止应用启动
+            self.tray_manager = None
+    
+    def show_window(self):
+        """显示窗口"""
+        try:
+            # 如果窗口被最小化或隐藏，则显示并激活
+            if self.isHidden():
+                self.show()
+            
+            if self.isMinimized():
+                self.showNormal()
+            
+            # 将窗口置于前台
+            self.raise_()
+            self.activateWindow()
+            
+            self.logger.info("窗口已显示并激活")
+            
+        except Exception as e:
+            self.logger.error(f"显示窗口失败: {e}", exc_info=True)
+    
+    def exit_application(self):
+        """退出应用程序"""
+        try:
+            self.logger.info("正在退出应用程序...")
+            
+            # 清理托盘资源
+            if hasattr(self, 'tray_manager') and self.tray_manager:
+                self.tray_manager.cleanup()
+                self.tray_manager = None
+            
+            # 正常关闭窗口
+            self.close()
+            
+        except Exception as e:
+            self.logger.error(f"退出应用程序失败: {e}", exc_info=True)
+            # 强制退出
+            QApplication.quit()
     
     def validate_login_status(self):
         """验证登录数据状态"""
@@ -442,9 +513,40 @@ class NetEaseMusicWindow(QMainWindow):
     
     def closeEvent(self, event):
         """窗口关闭事件"""
-        self.logger.info("正在关闭应用窗口...")
-        
         try:
+            # 检查是否有系统托盘且托盘可见
+            if hasattr(self, 'tray_manager') and self.tray_manager and self.tray_manager.is_visible:
+                self.logger.info("检测到系统托盘，最小化窗口到托盘")
+                
+                # 隐藏窗口而不是关闭应用
+                self.hide()
+                
+                # 阻止窗口关闭事件的默认行为
+                event.ignore()
+                
+                # 可选：显示系统托盘通知
+                if hasattr(self.tray_manager, 'qt_tray') and self.tray_manager.qt_tray:
+                    try:
+                        # 获取应用程序的样式
+                        app_style = QApplication.style()
+                        info_icon = app_style.standardIcon(
+                            app_style.StandardPixmap.SP_MessageBoxInformation
+                        )
+                        self.tray_manager.qt_tray.showMessage(
+                            "网易云音乐",
+                            "应用程序已最小化到系统托盘\n点击托盘图标可恢复窗口",
+                            info_icon,
+                            3000  # 显示3秒
+                        )
+                    except Exception as notify_error:
+                        self.logger.warning(f"显示托盘通知失败: {notify_error}")
+                
+                self.logger.info("窗口已最小化到系统托盘")
+                return
+            
+            # 如果没有托盘或托盘不可见，执行正常关闭流程
+            self.logger.info("正在关闭应用窗口...")
+            
             # 停止定时器（只保留新的增强监控定时器）
             if hasattr(self, 'enhanced_login_timer'):
                 self.enhanced_login_timer.stop()
@@ -461,6 +563,11 @@ class NetEaseMusicWindow(QMainWindow):
                 except Exception as e:
                     self.logger.warning(f"备份数据时出错: {e}")
             
+            # 清理托盘资源
+            if hasattr(self, 'tray_manager') and self.tray_manager:
+                self.tray_manager.cleanup()
+                self.logger.debug("系统托盘资源已清理")
+            
             # 清理Profile管理器
             if hasattr(self, 'profile_manager') and self.profile_manager:
                 self.profile_manager.close()
@@ -473,7 +580,9 @@ class NetEaseMusicWindow(QMainWindow):
             log_webview_event("window_close", "", False, f"资源清理失败: {e}")
         
         finally:
-            super().closeEvent(event)
+            # 只有在真正退出时才调用父类的closeEvent
+            if not (hasattr(self, 'tray_manager') and self.tray_manager and self.tray_manager.is_visible):
+                super().closeEvent(event)
 
 
 def main():
