@@ -10,7 +10,6 @@ dependencies = [
     "pyside6-addons>=6.10.1",
     "pyside6-essentials>=6.10.1",
     "shiboken6>=6.10.1",
-    
     # 打包工具依赖
     "pyinstaller>=6.17.0",
     "appimage-builder>=1.1.0",
@@ -33,6 +32,9 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
 
 [tool.black]
 line-length = 88
