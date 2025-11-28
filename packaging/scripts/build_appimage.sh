@@ -275,8 +275,9 @@ StartupNotify=true
 StartupWMClass=netease-music-desktop
 EOF
 
-    # 复制图标
+    # 复制图标并重命名
     cp "$SOURCE_DIR/icon/icon_256x256.png" NetEaseMusicDesktop.AppDir/netease-music-desktop.png
+    log_info "图标文件已复制并重命名为: netease-music-desktop.png"
     
     # 创建AppRun脚本
     cat > NetEaseMusicDesktop.AppDir/AppRun << 'EOF'
