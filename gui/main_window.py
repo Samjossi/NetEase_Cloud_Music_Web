@@ -16,6 +16,8 @@ from PySide6.QtWebEngineCore import QWebEnginePage
 from logger import get_logger, log_login_operation, log_webview_event
 from profile_manager import get_profile_manager
 from tray_manager import TrayManager, is_tray_supported, get_tray_backend
+from gui.close_confirm_dialog import show_close_confirm_dialog
+from gui.settings_dialog import show_settings_dialog
 
 
 class NetEaseMusicWindow(QMainWindow):
@@ -72,14 +74,28 @@ class NetEaseMusicWindow(QMainWindow):
             self.setCentralWidget(self.web_view)
             self.logger.debug("设置WebView为中心控件")
             
-            # 如果有图标文件，可以设置窗口图标
+            # 设置窗口图标
             try:
-                icon_path = "NetEase_Music_icon.png"
-                if os.path.exists(icon_path):
-                    self.setWindowIcon(QIcon(icon_path))
-                    self.logger.debug(f"设置窗口图标: {icon_path}")
-                else:
-                    self.logger.warning(f"图标文件不存在: {icon_path}")
+                # 优先尝试使用icon文件夹中的图标
+                icon_paths = [
+                    "icon/icon_64x64.png",
+                    "icon/icon_32x32.png",
+                    "icon/icon_16x16.png",
+                    "icon/icon_128x128.png",
+                    "icon/icon_256x256.png"
+                ]
+                
+                icon_set = False
+                for icon_path in icon_paths:
+                    if os.path.exists(icon_path):
+                        self.setWindowIcon(QIcon(icon_path))
+                        self.logger.debug(f"设置窗口图标: {icon_path}")
+                        icon_set = True
+                        break
+                
+                if not icon_set:
+                    self.logger.warning("未找到合适的窗口图标文件")
+                    
             except Exception as e:
                 self.logger.warning(f"设置窗口图标失败: {e}")
             
@@ -137,6 +153,21 @@ class NetEaseMusicWindow(QMainWindow):
         except Exception as e:
             self.logger.error(f"显示窗口失败: {e}", exc_info=True)
     
+    def show_settings_dialog(self):
+        """显示设置对话框"""
+        try:
+            self.logger.info("显示设置对话框")
+            settings_changed = show_settings_dialog(self)
+            
+            if settings_changed:
+                self.logger.info("用户已更改设置")
+                # 可以在这里添加设置更改后的处理逻辑
+            else:
+                self.logger.debug("用户取消设置更改或未更改设置")
+                
+        except Exception as e:
+            self.logger.error(f"显示设置对话框失败: {e}", exc_info=True)
+
     def exit_application(self):
         """退出应用程序"""
         try:
@@ -405,7 +436,7 @@ class NetEaseMusicWindow(QMainWindow):
                         self.logger.debug("未检测到音量相关设置")
                     
                     all_keys = result.get("allKeys", [])
-                    total_keys = result.get("totalKeys", 0)
+                    total_keys = result.get("total_keys", 0)
                     self.logger.info(f"localStorage 总键数: {total_keys}")
                     
                     # 记录所有键（调试用）
@@ -508,46 +539,135 @@ class NetEaseMusicWindow(QMainWindow):
             self.schedule_save_window_settings()
     
     def closeEvent(self, event):
-        """窗口关闭事件"""
+        """窗口关闭事件 - 支持用户偏好设置"""
         try:
+            self.logger.info("处理窗口关闭事件...")
+            
+            # 获取关闭行为偏好
+            close_behavior = self.profile_manager.get_close_behavior()
+            action = close_behavior.get("action", "ask")
+            first_time = close_behavior.get("first_time", True)
+            remember_choice = close_behavior.get("remember_choice", False)
+            
+            self.logger.info(f"关闭行为偏好: action={action}, first_time={first_time}, remember_choice={remember_choice}")
+            
             # 检查是否有系统托盘且托盘可见
-            if hasattr(self, 'tray_manager') and self.tray_manager and self.tray_manager.is_visible:
-                self.logger.info("检测到系统托盘，最小化窗口到托盘")
-                
-                # 隐藏窗口而不是关闭应用
-                self.hide()
-                
-                # 阻止窗口关闭事件的默认行为
-                event.ignore()
-                
-                # 可选：显示系统托盘通知
-                if hasattr(self.tray_manager, 'qt_tray') and self.tray_manager.qt_tray:
-                    try:
-                        # 获取应用程序的样式
-                        from PySide6.QtWidgets import QApplication
-                        app_style = QApplication.style()
-                        info_icon = app_style.standardIcon(
-                            app_style.StandardPixmap.SP_MessageBoxInformation
-                        )
-                        self.tray_manager.qt_tray.showMessage(
-                            "网易云音乐",
-                            "应用程序已最小化到系统托盘\n点击托盘图标可恢复窗口",
-                            info_icon,
-                            3000  # 显示3秒
-                        )
-                    except Exception as notify_error:
-                        self.logger.warning(f"显示托盘通知失败: {notify_error}")
-                
-                self.logger.info("窗口已最小化到系统托盘")
+            has_tray = (hasattr(self, 'tray_manager') and 
+                       self.tray_manager and 
+                       self.tray_manager.is_visible)
+            
+            # 如果没有托盘，直接关闭程序
+            if not has_tray:
+                self.logger.info("系统不支持托盘或托盘不可见，直接关闭程序")
+                self._perform_actual_close(event)
                 return
             
-            # 如果没有托盘或托盘不可见，执行正常关闭流程
-            self.logger.info("正在关闭应用窗口...")
+            # 根据用户偏好处理关闭行为
+            if action == "exit_program":
+                # 用户偏好是直接退出程序
+                self.logger.info("用户偏好设置：直接退出程序")
+                self._perform_actual_close(event)
+                return
             
-            # 停止定时器（只保留新的增强监控定时器）
+            elif action == "minimize_to_tray":
+                # 用户偏好是最小化到托盘
+                self.logger.info("用户偏好设置：最小化到托盘")
+                self._minimize_to_tray(event)
+                return
+            
+            else:  # action == "ask" 或其他情况
+                # 需要询问用户
+                self.logger.info("需要询问用户关闭行为")
+                user_action, remember = show_close_confirm_dialog(self)
+                
+                if user_action is None:
+                    # 用户取消了对话框，不关闭窗口
+                    self.logger.info("用户取消了关闭操作")
+                    event.ignore()
+                    return
+                
+                # 保存用户选择
+                if remember:
+                    self.logger.info(f"用户选择记住偏好: {user_action}")
+                    success = self.profile_manager.update_close_behavior(user_action, True)
+                    if success:
+                        self.logger.info("用户偏好保存成功")
+                    else:
+                        self.logger.warning("用户偏好保存失败")
+                else:
+                    self.logger.info(f"用户选择不记住偏好: {user_action}")
+                
+                # 执行用户选择的行为
+                if user_action == "exit_program":
+                    self.logger.info("用户选择：退出程序")
+                    self._perform_actual_close(event)
+                elif user_action == "minimize_to_tray":
+                    self.logger.info("用户选择：最小化到托盘")
+                    self._minimize_to_tray(event)
+                else:
+                    # 默认情况下最小化到托盘
+                    self.logger.info("默认行为：最小化到托盘")
+                    self._minimize_to_tray(event)
+            
+        except Exception as e:
+            self.logger.error(f"处理窗口关闭事件失败: {e}", exc_info=True)
+            # 发生错误时，默认执行关闭程序
+            self._perform_actual_close(event)
+    
+    def _minimize_to_tray(self, event):
+        """最小化窗口到系统托盘"""
+        try:
+            self.logger.info("最小化窗口到系统托盘")
+            
+            # 隐藏窗口而不是关闭应用
+            self.hide()
+            
+            # 阻止窗口关闭事件的默认行为
+            event.ignore()
+            
+            # 显示系统托盘通知
+            if hasattr(self, 'tray_manager') and self.tray_manager and hasattr(self.tray_manager, 'qt_tray') and self.tray_manager.qt_tray:
+                try:
+                    from PySide6.QtWidgets import QApplication
+                    app_style = QApplication.style()
+                    info_icon = app_style.standardIcon(
+                        app_style.StandardPixmap.SP_MessageBoxInformation
+                    )
+                    self.tray_manager.qt_tray.showMessage(
+                        "网易云音乐",
+                        "应用程序已最小化到系统托盘\n点击托盘图标可恢复窗口",
+                        info_icon,
+                        3000  # 显示3秒
+                    )
+                except Exception as notify_error:
+                    self.logger.warning(f"显示托盘通知失败: {notify_error}")
+            
+            self.logger.info("窗口已最小化到系统托盘")
+            
+        except Exception as e:
+            self.logger.error(f"最小化到托盘失败: {e}", exc_info=True)
+            # 如果最小化失败，执行实际关闭
+            self._perform_actual_close(event)
+    
+    def _perform_actual_close(self, event):
+        """执行实际的程序关闭操作"""
+        try:
+            self.logger.info("执行程序关闭操作...")
+            
+            # 停止定时器
             if hasattr(self, 'enhanced_login_timer'):
                 self.enhanced_login_timer.stop()
                 self.logger.debug("增强登录监控定时器已停止")
+            
+            if hasattr(self, 'window_save_timer') and self.window_save_timer:
+                self.window_save_timer.stop()
+                self.logger.debug("窗口设置保存定时器已停止")
+            
+            # 保存窗口设置
+            try:
+                self.save_window_settings()
+            except Exception as e:
+                self.logger.warning(f"保存窗口设置失败: {e}")
             
             # 备份登录数据（在关闭前）
             if hasattr(self, 'profile_manager') and self.profile_manager:
@@ -570,13 +690,18 @@ class NetEaseMusicWindow(QMainWindow):
                 self.profile_manager.close()
                 self.logger.debug("Profile管理器已清理")
             
-            log_webview_event("window_close", "", True, "用户关闭窗口，资源清理完成")
+            log_webview_event("window_close", "", True, "程序关闭完成，资源清理完成")
+            
+            # 调用父类的closeEvent以完成关闭
+            super().closeEvent(event)
             
         except Exception as e:
-            self.logger.error(f"关闭窗口时清理资源失败: {e}")
-            log_webview_event("window_close", "", False, f"资源清理失败: {e}")
-        
-        finally:
-            # 只有在真正退出时才调用父类的closeEvent
-            if not (hasattr(self, 'tray_manager') and self.tray_manager and self.tray_manager.is_visible):
-                super().closeEvent(event)
+            self.logger.error(f"执行程序关闭操作失败: {e}", exc_info=True)
+            # 强制退出
+            try:
+                from PySide6.QtWidgets import QApplication
+                QApplication.quit()
+            except Exception as quit_error:
+                self.logger.error(f"强制退出失败: {quit_error}")
+                import sys
+                sys.exit(1)

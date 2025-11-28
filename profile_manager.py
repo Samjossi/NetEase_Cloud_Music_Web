@@ -385,6 +385,94 @@ class ProfileManager:
             self.logger.error(f"重置窗口设置失败: {e}")
             return False
 
+    def get_user_preferences_path(self) -> str:
+        """获取用户偏好设置文件路径"""
+        return os.path.join(self.storage_path, "user_preferences.json")
+    
+    def save_user_preferences(self, preferences: Dict[str, Any]) -> bool:
+        """保存用户偏好设置"""
+        try:
+            preferences_path = self.get_user_preferences_path()
+            
+            # 添加版本信息和时间戳
+            preferences["version"] = "1.0"
+            preferences["last_updated"] = time.strftime("%Y-%m-%d %H:%M:%S")
+            
+            # 原子写入，避免文件损坏
+            temp_path = preferences_path + ".tmp"
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json.dump(preferences, f, indent=2, ensure_ascii=False)
+            
+            os.replace(temp_path, preferences_path)
+            
+            self.logger.debug(f"用户偏好设置已保存: {preferences_path}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"保存用户偏好设置失败: {e}")
+            return False
+    
+    def load_user_preferences(self) -> Dict[str, Any]:
+        """加载用户偏好设置"""
+        try:
+            preferences_path = self.get_user_preferences_path()
+            
+            if not os.path.exists(preferences_path):
+                self.logger.debug("用户偏好设置文件不存在，返回默认设置")
+                return self._get_default_user_preferences()
+            
+            with open(preferences_path, 'r', encoding='utf-8') as f:
+                preferences = json.load(f)
+            
+            # 验证数据完整性
+            if "close_behavior" not in preferences:
+                self.logger.warning("用户偏好设置文件格式不完整，使用默认设置")
+                return self._get_default_user_preferences()
+            
+            self.logger.debug(f"用户偏好设置加载成功，最后更新: {preferences.get('last_updated', 'unknown')}")
+            return preferences
+            
+        except Exception as e:
+            self.logger.error(f"加载用户偏好设置失败: {e}")
+            return self._get_default_user_preferences()
+    
+    def _get_default_user_preferences(self) -> Dict[str, Any]:
+        """获取默认用户偏好设置"""
+        return {
+            "close_behavior": {
+                "action": "ask",  # ask, minimize_to_tray, exit_program
+                "remember_choice": False,
+                "first_time": True
+            },
+            "version": "1.0"
+        }
+    
+    def update_close_behavior(self, action: str, remember_choice: bool = False) -> bool:
+        """更新关闭行为偏好"""
+        try:
+            preferences = self.load_user_preferences()
+            
+            # 更新关闭行为设置
+            preferences["close_behavior"]["action"] = action
+            preferences["close_behavior"]["remember_choice"] = remember_choice
+            preferences["close_behavior"]["first_time"] = False
+            
+            return self.save_user_preferences(preferences)
+            
+        except Exception as e:
+            self.logger.error(f"更新关闭行为偏好失败: {e}")
+            return False
+    
+    def get_close_behavior(self) -> Dict[str, Any]:
+        """获取关闭行为偏好"""
+        try:
+            preferences = self.load_user_preferences()
+            return preferences.get("close_behavior", self._get_default_user_preferences()["close_behavior"])
+            
+        except Exception as e:
+            self.logger.error(f"获取关闭行为偏好失败: {e}")
+            return self._get_default_user_preferences()["close_behavior"]
+
     def get_profile(self) -> Optional[QWebEngineProfile]:
         """获取Profile实例"""
         return self.profile

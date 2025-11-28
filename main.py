@@ -5,8 +5,10 @@
 使用PySide6创建原生窗口壳
 """
 
+import os
 import sys
 from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QIcon
 
 # 导入日志系统
 from logger import init_logging, get_logger, log_startup_performance
@@ -39,6 +41,31 @@ def main():
         # 创建应用实例
         app = QApplication(sys.argv)
         app_logger.info("创建QApplication实例")
+        
+        # 设置应用程序图标（这将影响任务栏图标）
+        try:
+            icon_paths = [
+                "icon/icon_64x64.png",
+                "icon/icon_32x32.png",
+                "icon/icon_48x48.png",
+                "icon/icon_128x128.png"
+            ]
+            
+            app_icon = None
+            for icon_path in icon_paths:
+                if os.path.exists(icon_path):
+                    app_icon = QIcon(icon_path)
+                    app_logger.info(f"设置应用程序图标: {icon_path}")
+                    break
+            
+            if app_icon and not app_icon.isNull():
+                app.setWindowIcon(app_icon)
+                app_logger.info("应用程序图标设置成功")
+            else:
+                app_logger.warning("未找到合适的应用程序图标文件")
+                
+        except Exception as e:
+            app_logger.warning(f"设置应用程序图标失败: {e}")
         
         # 设置应用信息
         app.setApplicationName("网易云音乐桌面版")

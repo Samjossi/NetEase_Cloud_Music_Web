@@ -90,13 +90,14 @@ class TrayManager(QObject):
     
     def _get_qt_icon(self) -> Optional[QIcon]:
         """获取Qt图标对象"""
-        # 尝试多种图标尺寸
+        # 优先使用适合托盘显示的图标尺寸，按推荐顺序排列
         icon_paths = [
-            "icon/icon_16x16.png",
-            "icon/icon_24x24.png", 
-            "icon/icon_32x32.png",
-            "icon/icon_64x64.png",
-            "NetEase_Music_icon.png"
+            "icon/icon_32x32.png",    # 托盘图标推荐尺寸
+            "icon/icon_24x24.png",    # 小尺寸托盘
+            "icon/icon_64x64.png",    # 高DPI显示器
+            "icon/icon_16x16.png",    # 极小尺寸托盘
+            "icon/icon_128x128.png",  # 超高DPI
+            "icon/icon_256x256.png"   # 超高分辨率
         ]
         
         for path in icon_paths:
@@ -116,6 +117,14 @@ class TrayManager(QObject):
             show_hide_action = QAction("显示/隐藏窗口", self)
             show_hide_action.triggered.connect(self._on_qt_show_hide)
             menu.addAction(show_hide_action)
+            
+            # 分隔线
+            menu.addSeparator()
+            
+            # 设置菜单项
+            settings_action = QAction("设置", self)
+            settings_action.triggered.connect(self._on_qt_settings)
+            menu.addAction(settings_action)
             
             # 分隔线
             menu.addSeparator()
@@ -142,6 +151,14 @@ class TrayManager(QObject):
     def _on_qt_show_hide(self):
         """Qt显示/隐藏窗口回调"""
         self.show_window_requested.emit()
+    
+    def _on_qt_settings(self):
+        """Qt设置回调"""
+        # 发送设置请求信号到主窗口
+        if hasattr(self.parent(), 'show_settings_dialog'):
+            self.parent().show_settings_dialog()
+        else:
+            self.logger.warning("主窗口不支持设置对话框")
     
     def _on_qt_exit(self):
         """Qt退出程序回调"""
