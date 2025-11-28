@@ -95,9 +95,11 @@ class TrayManager(QObject):
         if hasattr(sys, '_MEIPASS'):
             # PyInstaller打包环境
             base_path = sys._MEIPASS
+            self.logger.debug(f"PyInstaller打包环境，使用临时路径: {base_path}")
         else:
             # 开发环境
             base_path = os.getcwd()
+            self.logger.debug(f"开发环境，使用当前路径: {base_path}")
         
         # 优先使用适合托盘显示的图标尺寸，按推荐顺序排列
         icon_paths = [
@@ -113,7 +115,11 @@ class TrayManager(QObject):
             full_path = os.path.join(base_path, path)
             if os.path.exists(full_path):
                 self.logger.debug(f"找到托盘图标: {full_path}")
-                return QIcon(full_path)
+                icon = QIcon(full_path)
+                if not icon.isNull():
+                    return icon
+                else:
+                    self.logger.warning(f"图标文件损坏或无效: {full_path}")
         
         self.logger.warning("未找到合适的托盘图标文件")
         return None

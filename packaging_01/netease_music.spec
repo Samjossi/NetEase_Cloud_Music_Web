@@ -11,7 +11,7 @@ from pathlib import Path
 
 # 项目路径
 PROJECT_ROOT = Path("/home/afro/heavenly_kingdom/do_for_fun/NetEase_Cloud_Music_Web")
-PACKAGING_DIR = Path("/home/afro/heavenly_kingdom/do_for_fun/NetEase_Cloud_Music_Web/packaging_02")
+PACKAGING_DIR = Path("/home/afro/heavenly_kingdom/do_for_fun/NetEase_Cloud_Music_Web/packaging_01")
 
 # 分析主脚本
 a = Analysis(
@@ -68,7 +68,7 @@ exe = EXE(
     a.scripts,
     a.binaries,  # 包含所有二进制文件
     a.zipfiles,   # 包含所有压缩文件
-    a.datas,     # 包含所有数据文件
+    a.datas,     # 包含所有数据文件（包括图标文件）
     [],
     name="NetEaseMusicDesktop",
     debug=False,
@@ -78,10 +78,8 @@ exe = EXE(
     console=False,  # 设置为False，这样就不会显示控制台窗口
     disable_windowed_traceback=False,
     argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    icon=str(PROJECT_ROOT / "icon" / "icon_256x256.png") if (PROJECT_ROOT / "icon" / "icon_256x256.png").exists() else None,
+    # 移除Windows和macOS特定配置，专注于Linux环境
+    # 注意：在Linux上，图标显示主要通过代码中的路径解析和设置来确保
 )
 
 # 单文件模式 - 不使用COLLECT，直接使用EXE

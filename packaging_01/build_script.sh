@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 
 # 项目路径
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PACKAGING_DIR="$PROJECT_ROOT/packaging_02"
+PACKAGING_DIR="$PROJECT_ROOT/packaging_01"
 DISH_DIR="$PACKAGING_DIR/dish"
 VENV_DIR="$PROJECT_ROOT/.venv"
 

@@ -44,18 +44,28 @@ def main():
         
         # 设置应用程序图标（这将影响任务栏图标）
         try:
+            # 处理PyInstaller打包后的路径
+            if hasattr(sys, '_MEIPASS'):
+                base_path = sys._MEIPASS
+            else:
+                base_path = os.getcwd()
+            
+            # Linux桌面环境推荐的图标尺寸顺序
             icon_paths = [
-                "icon/icon_64x64.png",
-                "icon/icon_32x32.png",
-                "icon/icon_48x48.png",
-                "icon/icon_128x128.png"
+                "icon/icon_64x64.png",    # 标准桌面图标尺寸
+                "icon/icon_32x32.png",    # 小尺寸图标
+                "icon/icon_128x128.png",  # 高DPI显示器
+                "icon/icon_24x24.png",    # 小型托盘/面板
+                "icon/icon_16x16.png",    # 极小尺寸
+                "icon/icon_256x256.png"   # 超高分辨率
             ]
             
             app_icon = None
             for icon_path in icon_paths:
-                if os.path.exists(icon_path):
-                    app_icon = QIcon(icon_path)
-                    app_logger.info(f"设置应用程序图标: {icon_path}")
+                full_path = os.path.join(base_path, icon_path)
+                if os.path.exists(full_path):
+                    app_icon = QIcon(full_path)
+                    app_logger.info(f"设置应用程序图标: {full_path}")
                     break
             
             if app_icon and not app_icon.isNull():
