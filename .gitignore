@@ -24,3 +24,6 @@ packaging/dish/
 packaging_01/dish/
 
 **/dish/
+
+**/logs/
+**/build_logs/

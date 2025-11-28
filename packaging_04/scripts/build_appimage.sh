@@ -90,10 +90,12 @@ check_uv_venv() {
 install_build_deps() {
     log_info "安装构建依赖..."
     
-    # 激活虚拟环境并确保打包工具已安装
+    # 激活UV虚拟环境
     source "$SOURCE_DIR/.venv/bin/activate"
     
-    pip install --upgrade pyinstaller appimage-builder pyinstaller-hooks-contrib
+    # 使用UV的包管理器安装依赖
+    log_info "使用UV安装构建依赖..."
+    uv pip install --upgrade pyinstaller appimage-builder pyinstaller-hooks-contrib
     
     log_success "构建依赖安装完成"
 }
@@ -109,7 +111,7 @@ import sys
 from PySide6.QtCore import QCoreApplication
 
 # 获取项目根目录
-project_root = os.path.dirname(os.path.dirname(SPEC))
+project_root = "/home/afro/heavenly_kingdom/do_for_fun/NetEase_Cloud_Music_Web"
 icon_dir = os.path.join(project_root, 'icon')
 config_dir = os.path.join(project_root, 'config')
 logger_dir = os.path.join(project_root, 'logger')
@@ -153,7 +155,7 @@ excludes = [
 ]
 
 a = Analysis(
-    ['main.py'],
+    [os.path.join(project_root, 'main.py')],
     pathex=[project_root],
     binaries=[],
     datas=datas,
@@ -171,9 +173,10 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
+    a.binaries,
+    a.datas,
     [],
-    exclude_binaries=True,
-    name='NetEaseCloudMusic',
+    name='NetEaseMusicDesktop',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -186,16 +189,6 @@ exe = EXE(
     entitlements_file=None,
     icon=os.path.join(icon_dir, 'icon_256x256.png'),
 )
-
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='NetEaseCloudMusic',
-)
 EOF
 
     log_success "PyInstaller规格文件生成完成: $TEMP_DIR/NetEaseMusic.spec"
@@ -206,9 +199,10 @@ run_pyinstaller() {
     log_info "使用PyInstaller打包应用..."
     
     source "$SOURCE_DIR/.venv/bin/activate"
-    cd "$TEMP_DIR"
     
-    pyinstaller NetEaseMusic.spec --clean --noconfirm
+    # 在项目根目录运行PyInstaller，但使用临时目录的spec文件
+    cd "$SOURCE_DIR"
+    pyinstaller "$TEMP_DIR/NetEaseMusic.spec" --clean --noconfirm
     
     log_success "PyInstaller打包完成"
 }
@@ -245,16 +239,6 @@ AppDir:
 AppImage:
   arch: x86_64
   update-information: None
-  create-desktopfile: true
-  segments:
-    - name: runtime
-      path: /usr/bin/appimagetool-x86_64.AppImage
-  files:
-    include:
-    - /usr/lib/python3.12/*
-    exclude:
-    - /usr/lib/python3.12/test/*
-    - /usr/lib/python3.12/*/test/*
 EOF
 
     log_success "AppImage配置文件生成完成: $TEMP_DIR/appimage.yml"
@@ -267,18 +251,24 @@ build_appimage() {
     source "$SOURCE_DIR/.venv/bin/activate"
     cd "$TEMP_DIR"
     
-    # 移动PyInstaller输出到AppDir
-    mv NetEaseCloudMusic NetEaseCloudMusic.AppDir
+    # 清理之前的AppDir
+    rm -rf NetEaseMusicDesktop.AppDir
+    
+    # 创建AppDir目录结构
+    mkdir -p NetEaseMusicDesktop.AppDir
+    
+    # 复制PyInstaller输出的可执行文件到AppDir
+    cp "$SOURCE_DIR/dist/NetEaseMusicDesktop" NetEaseMusicDesktop.AppDir/
     
     # 创建桌面文件
-    cat > NetEaseCloudMusic.AppDir/netease-music-desktop.desktop << EOF
+    cat > NetEaseMusicDesktop.AppDir/netease-music-desktop.desktop << EOF
 [Desktop Entry]
 Type=Application
 Name=网易云音乐桌面版
 Name[en]=NetEase Cloud Music Desktop
 Comment=基于PySide6的网易云音乐桌面播放器
 Comment[en]=NetEase Cloud Music Desktop Player
-Exec=NetEaseCloudMusic
+Exec=NetEaseMusicDesktop
 Icon=netease-music-desktop
 Categories=AudioVideo;Audio;Player;
 StartupNotify=true
@@ -286,37 +276,49 @@ StartupWMClass=netease-music-desktop
 EOF
 
     # 复制图标
-    cp "$SOURCE_DIR/icon/icon_256x256.png" NetEaseCloudMusic.AppDir/netease-music-desktop.png
+    cp "$SOURCE_DIR/icon/icon_256x256.png" NetEaseMusicDesktop.AppDir/netease-music-desktop.png
     
     # 创建AppRun脚本
-    cat > NetEaseCloudMusic.AppDir/AppRun << 'EOF'
+    cat > NetEaseMusicDesktop.AppDir/AppRun << 'EOF'
 #!/bin/bash
 HERE="$(dirname "$(readlink -f "${0}")")"
-export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
-export PYTHONPATH="${HERE}/usr/lib/python3.12/site-packages:${HERE}/usr/lib/python3.12:${PYTHONPATH}"
-export QT_QPA_PLATFORM_PLUGIN_PATH="${HERE}/usr/plugins/platforms"
-export QT_PLUGIN_PATH="${HERE}/usr/plugins"
 
-# 检查Python版本
-if ! command -v python3 &> /dev/null; then
-    echo "错误：未找到Python3，请安装Python 3.12.3或更高版本"
+# 设置基本环境变量
+export LD_LIBRARY_PATH="${HERE}:${LD_LIBRARY_PATH}"
+export QT_PLUGIN_PATH="${HERE}"
+export QT_QPA_PLATFORM_PLUGIN_PATH="${HERE}"
+
+# 添加调试信息
+echo "AppImage启动调试信息:"
+echo "HERE: $HERE"
+echo "可执行文件: ${HERE}/NetEaseMusicDesktop"
+echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+echo "QT_PLUGIN_PATH: $QT_PLUGIN_PATH"
+
+# 检查可执行文件是否存在
+if [ ! -f "${HERE}/NetEaseMusicDesktop" ]; then
+    echo "错误：找不到可执行文件 ${HERE}/NetEaseMusicDesktop"
+    ls -la "${HERE}/"
     exit 1
 fi
 
-PYTHON_VERSION=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')")
-REQUIRED_VERSION="3.12.3"
-
-if [ "$(printf '%s\n' "$REQUIRED_VERSION" "$PYTHON_VERSION" | sort -V | head -n1)" != "$REQUIRED_VERSION" ]; then
-    echo "错误：Python版本过低，当前版本: $PYTHON_VERSION，需要: $REQUIRED_VERSION或更高版本"
-    exit 1
-fi
-
-exec python3 "${HERE}/usr/bin/NetEaseCloudMusic" "$@"
+# 直接执行PyInstaller打包的单个可执行文件
+exec "${HERE}/NetEaseMusicDesktop" "$@"
 EOF
-    chmod +x NetEaseCloudMusic.AppDir/AppRun
+    chmod +x NetEaseMusicDesktop.AppDir/AppRun
     
-    # 使用appimage-builder构建
-    appimage-builder --recipe appimage.yml
+        # 使用传统方法构建AppImage
+    log_info "使用传统方法构建AppImage..."
+    
+    # 下载appimagetool如果不存在
+    if [ ! -f "appimagetool-x86_64.AppImage" ]; then
+        log_info "下载appimagetool..."
+        wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+        chmod +x appimagetool-x86_64.AppImage
+    fi
+    
+    # 创建AppImage
+    ./appimagetool-x86_64.AppImage NetEaseMusicDesktop.AppDir
     
     log_success "AppImage构建完成"
 }
@@ -327,8 +329,8 @@ copy_results() {
     
     cd "$TEMP_DIR"
     
-    # 找到生成的AppImage文件
-    APPIMAGE_FILE=$(find . -name "*.AppImage" -type f | head -1)
+    # 找到生成的AppImage文件，排除appimagetool本身
+    APPIMAGE_FILE=$(find . -name "*.AppImage" -type f ! -name "appimagetool*" | head -1)
     
     if [ -n "$APPIMAGE_FILE" ]; then
         cp "$APPIMAGE_FILE" "$OUTPUT_DIR/"
