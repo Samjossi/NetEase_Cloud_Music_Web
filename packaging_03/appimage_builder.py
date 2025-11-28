@@ -280,7 +280,7 @@ class AppImageBuilder:
         run_content = f'''#!/bin/bash
 # 网易云音乐桌面版 AppImage运行脚本
 
-APPIMAGE_PATH="$(cd "$(dirname "${{BASH_SOURCE[0]}")" && pwd)/{self.final_appimage.name}"
+APPIMAGE_PATH="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)/{self.final_appimage.name}"
 
 if [ ! -f "$APPIMAGE_PATH" ]; then
     echo "错误: AppImage文件不存在: $APPIMAGE_PATH"
@@ -309,7 +309,7 @@ exec "$APPIMAGE_PATH" "$@"
         test_content = f'''#!/bin/bash
 # 网易云音乐桌面版 AppImage测试脚本
 
-APPIMAGE_PATH="$(cd "$(dirname "${{BASH_SOURCE[0]}")" && pwd)/{self.final_appimage.name}"
+APPIMAGE_PATH="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)/{self.final_appimage.name}"
 
 echo "=== AppImage兼容性测试 ==="
 echo "AppImage路径: $APPIMAGE_PATH"

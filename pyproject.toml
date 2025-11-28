@@ -1,15 +1,66 @@
 [project]
 name = "netease-cloud-music-web"
 version = "0.1.0"
-description = "Add your description here"
+description = "网易云音乐桌面版 - 基于PySide6的Web音乐播放器"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "pyinstaller>=6.17.0",
+    # 核心GUI依赖
     "pyside6>=6.10.1",
+    "pyside6-addons>=6.10.1",
+    "pyside6-essentials>=6.10.1",
+    "shiboken6>=6.10.1",
+    
+    # 打包工具依赖
+    "pyinstaller>=6.17.0",
+    "appimage-builder>=1.1.0",
+    "pyinstaller-hooks-contrib>=2025.10",
 ]
 
 [dependency-groups]
 dev = [
+    # AppImage构建工具
     "appimage-builder>=1.1.0",
+    "docker>=7.1.0",
+    "lief>=0.17.1",
+    
+    # 开发工具（可选）
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "pytest>=7.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    ".eggs",
+    "*.egg-info",
 ]

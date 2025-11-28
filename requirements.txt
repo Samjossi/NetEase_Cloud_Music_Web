@@ -1,3 +1,76 @@
-pyside6==6.10.1
+# 网易云音乐桌面版 - 完整依赖列表
+# 生成时间: 2025-11-28
+# 包含所有运行时和构建时依赖
 
-pyinstaller==5.13.0
+# === 核心GUI依赖 ===
+pyside6==6.10.1              # Qt GUI框架
+pyside6-addons==6.10.1       # Qt扩展组件
+pyside6-essentials==6.10.1   # Qt核心组件
+shiboken6==6.10.1             # Python-Qt绑定生成器
+
+# === 打包工具依赖 ===
+pyinstaller==6.17.0           # 传统打包工具（向后兼容）
+appimage-builder==1.1.0       # AppImage构建工具
+pyinstaller-hooks-contrib==2025.10  # PyInstaller钩子扩展
+
+# === AppImage构建相关依赖 ===
+docker==7.1.0                 # 容器化构建环境
+lief==0.17.1                  # 二进制文件分析库
+roam==0.3.1                   # AppImage工具链组件
+emrichen==0.4.0               # 模板处理工具
+jsonpath-rw==1.4.0            # JSON路径查询
+pyaml==21.10.1                # YAML处理
+questionary==2.1.1            # 交互式命令行界面
+schema==0.7.8                 # 数据验证
+ruamel-yaml==0.18.16          # 高级YAML处理
+ruamel-yaml-clib==0.2.15     # YAML C扩展
+python-gnupg==0.5.5          # GPG加密支持
+
+# === 系统工具依赖 ===
+# 以下系统工具需要单独安装：
+# - patchelf: 用于重写动态库RPATH
+#   Ubuntu/Debian: sudo apt-get install patchelf
+#   CentOS/RHEL: sudo yum install patchelf
+#
+# - appimagetool: 用于创建AppImage文件
+#   wget https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+#   chmod +x appimagetool-x86_64.AppImage
+#   sudo mv appimagetool-x86_64.AppImage /usr/local/bin/appimagetool
+
+# === 基础依赖 ===
+packaging==25.0               # 包元数据处理
+setuptools==80.9.0            # Python包构建工具
+altgraph==0.17.5              # 图数据结构
+decorator==5.2.1              # 装饰器工具
+ply==3.11                     # 词法分析器生成器
+six==1.17.0                   # Python 2/3兼容库
+
+# === 网络和加密依赖 ===
+requests==2.32.5              # HTTP客户端库
+certifi==2025.11.12           # SSL证书
+urllib3==2.5.0                # HTTP库
+charset-normalizer==3.4.4     # 字符编码检测
+idna==3.11                    # 国际化域名
+
+# === 命令行界面依赖 ===
+prompt-toolkit==3.0.52        # 命令行界面工具包
+wcwidth==0.2.14               # 字符宽度计算
+
+# === 配置和数据处理 ===
+pyyaml==6.0.3                 # YAML解析器
+
+# === 使用说明 ===
+# 
+# 安装方法：
+#   uv pip install -r requirements.txt
+#
+# 或者使用uv同步：
+#   uv sync
+#
+# 构建AppImage前确保安装了系统工具：
+#   sudo apt-get install patchelf  # Ubuntu/Debian
+#   sudo yum install patchelf       # CentOS/RHEL
+#
+#   wget https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+#   chmod +x appimagetool-x86_64.AppImage
+#   sudo mv appimagetool-x86_64.AppImage /usr/local/bin/appimagetool
