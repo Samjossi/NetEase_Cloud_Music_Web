@@ -22,3 +22,5 @@ packaging/dish/
 *.AppImage
 
 packaging_01/dish/
+
+**/dish/
