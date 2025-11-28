@@ -22,8 +22,15 @@ from logger import get_logger
 class ProfileManager:
     """WebEngine Profile管理器，确保登录数据正确持久化"""
     
-    def __init__(self, storage_path: str = "./login_data"):
+    def __init__(self, storage_path: Optional[str] = None):
         self.logger = get_logger("profile_manager")
+        
+        # 优先使用环境变量，否则使用用户目录
+        if storage_path is None:
+            storage_path = os.environ.get('NETEASE_LOGIN_DATA_PATH')
+            if storage_path is None:
+                storage_path = os.path.expanduser("~/.local/share/netease-music/login_data")
+        
         self.storage_path = os.path.abspath(storage_path)
         self.profile: Optional[QWebEngineProfile] = None
         self._ensure_storage_directory()
@@ -492,7 +499,7 @@ class ProfileManager:
 _profile_manager = None
 
 
-def get_profile_manager(storage_path: str = "./login_data") -> ProfileManager:
+def get_profile_manager(storage_path: Optional[str] = None) -> ProfileManager:
     """获取全局Profile管理器实例"""
     global _profile_manager
     if _profile_manager is None:
