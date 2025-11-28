@@ -38,10 +38,6 @@ class NetEaseMusicWindow(QMainWindow):
     def init_ui(self):
         """初始化用户界面"""
         try:
-            # 设置窗口标题
-            self.setWindowTitle("网易云音乐 - 网页封装版")
-            self.logger.debug("设置窗口标题: 网易云音乐 - 网页封装版")
-            
             # 设置窗口大小 (适合播放器的尺寸)
             self.resize(1200, 800)
             self.setMinimumSize(800, 600)
@@ -454,7 +450,7 @@ class NetEaseMusicWindow(QMainWindow):
         """页面标题变化"""
         self.logger.debug(f"页面标题变化: {title}")
         if title:
-            self.setWindowTitle(f"网易云音乐 - {title}")
+            self.setWindowTitle(f"{title} - 网页封装版")
     
     def load_window_settings(self):
         """加载窗口设置"""
