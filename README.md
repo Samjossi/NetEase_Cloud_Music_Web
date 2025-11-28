@@ -27,7 +27,7 @@ python run.py
 
 #### 方法二：直接运行主程序
 ```bash
-python main.py
+python main01.py
 ```
 
 ## 项目结构
