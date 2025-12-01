@@ -288,19 +288,22 @@ class PackagingGUI:
                 universal_newlines=True
             )
             
-            # 读取输出
+            # 读取输出并获取返回码
+            return_code = None
             while True:
                 output = self.current_process.stdout.readline()
                 if output == '' and self.current_process.poll() is not None:
+                    return_code = self.current_process.poll()  # 在进程结束时获取返回码
                     break
-                if output:
-                    self.root.after(0, lambda: self.log_message(output.strip()))
+                if output and output.strip():  # 确保输出不为空
+                    self.root.after(0, lambda msg=output.strip(): self.log_message(msg))
             
-            # 检查返回码
-            return_code = self.current_process.poll()
+            # 使用已经获取的返回码
             if return_code == 0:
+                self.log_message(f"进程正常结束，返回码: {return_code}", "SUCCESS")
                 self.root.after(0, lambda: self.on_packaging_success(mode))
             else:
+                self.log_message(f"进程异常结束，返回码: {return_code}", "ERROR")
                 self.root.after(0, lambda: self.on_packaging_failed(mode, return_code))
                 
         except Exception as e:
