@@ -584,26 +584,22 @@ class ProfileManager:
         }
     
     def update_pipewire_restart_time(self, restart_timestamp: float) -> bool:
-        """更新PipeWire重启时间"""
+        """更新PipeWire重启时间 - 简化版本：不计算下次重启时间"""
         try:
             config = self.load_pipewire_config()
             
             # 更新重启时间
             config["last_restart_timestamp"] = restart_timestamp
             
-            # 计算下次重启时间
-            interval_hours = config["restart_interval_hours"]
-            next_restart_time = restart_timestamp + (interval_hours * 3600)
-            config["next_restart_timestamp"] = next_restart_time
-            
-            # 重置跳过标志
+            # 简化版本：不自动计算下次重启时间，因为使用歌曲计数机制
+            # 只重置跳过标志
             config["skip_next_restart"] = False
             
             # 保存配置
             success = self.save_pipewire_config(config)
             
             if success:
-                self.logger.info(f"PipeWire重启时间已更新: 上次={restart_timestamp}, 下次={next_restart_time}")
+                self.logger.info(f"PipeWire重启时间已更新: 上次={restart_timestamp}")
             else:
                 self.logger.error("更新PipeWire重启时间失败")
             
@@ -772,7 +768,9 @@ class ProfileManager:
     def _format_relative_time(self, seconds: float) -> str:
         """格式化相对时间"""
         try:
-            if seconds < 0:
+            if seconds is None:
+                return "未知"
+            elif seconds < 0:
                 return "刚刚"
             elif seconds < 60:
                 return f"{int(seconds)}秒"

@@ -142,7 +142,7 @@ class TrayManager(QObject):
         return None
     
     def _create_qt_menu(self) -> QMenu:
-        """创建Qt右键菜单"""
+        """创建Qt右键菜单 - 简化版本"""
         try:
             menu = QMenu()
             
@@ -153,16 +153,6 @@ class TrayManager(QObject):
             
             # 分隔线
             menu.addSeparator()
-            
-            # PipeWire状态菜单项
-            self.pipewire_status_action = QAction("PipeWire: 检查中...", self)
-            self.pipewire_status_action.setEnabled(False)  # 初始状态禁用
-            menu.addAction(self.pipewire_status_action)
-            
-            # PipeWire配置菜单项
-            pipewire_config_action = QAction("PipeWire配置", self)
-            pipewire_config_action.triggered.connect(self._on_qt_pipewire_config)
-            menu.addAction(pipewire_config_action)
             
             # 手动重启PipeWire菜单项
             pipewire_restart_action = QAction("手动重启PipeWire", self)
@@ -203,26 +193,6 @@ class TrayManager(QObject):
         """Qt显示/隐藏窗口回调"""
         self.show_window_requested.emit()
     
-    def _on_qt_pipewire_config(self):
-        """Qt PipeWire配置回调"""
-        try:
-            if self.profile_manager:
-                config = self.profile_manager.get_pipewire_full_config()
-                config_text = "PipeWire配置:\n\n"
-                config_text += f"自动重启: {'启用' if config.get('auto_restart_enabled', False) else '禁用'}\n"
-                config_text += f"重启间隔: {config.get('restart_interval_songs', 16)}首歌\n"
-                config_text += f"显示通知: {'启用' if config.get('show_notifications', True) else '禁用'}\n"
-                config_text += f"服务检查间隔: {config.get('service_check_interval', 30)}秒\n"
-                config_text += f"重启超时: {config.get('restart_timeout', 10)}秒\n"
-                
-                if config.get('next_restart_countdown'):
-                    config_text += f"\n下次重启倒计时: {config['next_restart_countdown']}"
-                
-                self._show_info_dialog("PipeWire配置", config_text)
-            else:
-                self.logger.warning("Profile管理器未初始化")
-        except Exception as e:
-            self.logger.error(f"显示PipeWire配置失败: {e}", exc_info=True)
     
     def _on_qt_pipewire_restart(self):
         """Qt手动重启PipeWire回调"""
@@ -581,23 +551,12 @@ class TrayManager(QObject):
             self.logger.error(f"处理PipeWire重启完成回调失败: {e}", exc_info=True)
     
     def _on_pipewire_status_changed(self, is_available: bool, message: str):
-        """PipeWire状态变化回调"""
+        """PipeWire状态变化回调 - 简化版本：只记录日志"""
         try:
-            # 更新托盘菜单中的PipeWire状态
-            if hasattr(self, 'pipewire_status_action') and self.pipewire_status_action:
-                if is_available:
-                    status_text = f"PipeWire: 正常运行"
-                    self.pipewire_status_action.setText(status_text)
-                    self.logger.info(f"PipeWire服务状态: {message}")
-                else:
-                    status_text = f"PipeWire: 服务异常"
-                    self.pipewire_status_action.setText(status_text)
-                    self.logger.warning(f"PipeWire服务状态异常: {message}")
+            if is_available:
+                self.logger.info(f"PipeWire服务状态: {message}")
             else:
-                if is_available:
-                    self.logger.info(f"PipeWire服务状态: {message}")
-                else:
-                    self.logger.warning(f"PipeWire服务状态异常: {message}")
+                self.logger.warning(f"PipeWire服务状态异常: {message}")
                 
         except Exception as e:
             self.logger.error(f"处理PipeWire状态变化失败: {e}", exc_info=True)
