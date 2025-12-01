@@ -16,8 +16,8 @@ from profile_manager import cleanup_profile_manager
 
 # 导入GUI模块
 from gui import NetEaseMusicWindow
-# 导入TrayManager用于PipeWire后台自动重启
-from tray_manager import TrayManager
+# 导入PipeWire集成模块用于后台自动重启
+from pipewire_manager_integration import PipeWireManagerIntegration
 
 
 def main():
@@ -93,16 +93,18 @@ def main():
         app_logger.info("正在创建主窗口...")
         window = NetEaseMusicWindow()
         
-        # 初始化TrayManager用于PipeWire后台自动重启
+        # 初始化PipeWire集成用于后台自动重启
         app_logger.info("正在初始化PipeWire后台自动重启系统...")
         try:
-            tray_manager = TrayManager(window)
-            if tray_manager.is_visible:
-                app_logger.info("PipeWire后台自动重启系统启动成功")
+            pipewire_integration = PipeWireManagerIntegration(window)
+            # 设置WebView实例用于获取歌曲信息
+            if hasattr(window, 'web_view') and window.web_view:
+                pipewire_integration.set_webview(window.web_view)
+                app_logger.info("PipeWire集成系统启动成功")
             else:
-                app_logger.warning("PipeWire后台自动重启系统启动失败，但不影响应用运行")
+                app_logger.warning("WebView未设置，PipeWire歌曲监控功能不可用")
         except Exception as e:
-            app_logger.error(f"初始化PipeWire后台自动重启系统失败: {e}")
+            app_logger.error(f"初始化PipeWire集成系统失败: {e}")
             app_logger.info("应用将继续运行，但PipeWire自动重启功能不可用")
         
         # 显示窗口

@@ -16,6 +16,7 @@ from PySide6.QtWebEngineCore import QWebEnginePage
 from logger import get_logger, log_login_operation, log_webview_event
 from profile_manager import get_profile_manager
 from tray_manager import TrayManager, is_tray_supported, get_tray_backend
+from pipewire_manager_integration import PipeWireManagerIntegration
 from gui.close_confirm_dialog import show_close_confirm_dialog
 from gui.settings_dialog import show_settings_dialog
 
@@ -142,12 +143,71 @@ class NetEaseMusicWindow(QMainWindow):
             self.tray_manager.show_window_requested.connect(self.show_window)
             self.tray_manager.exit_requested.connect(self.exit_application)
             
+            # 初始化PipeWire集成到现有托盘
+            self._init_pipewire_integration()
+            
             self.logger.info("系统托盘初始化成功")
             
         except Exception as e:
             self.logger.error(f"设置系统托盘失败: {e}", exc_info=True)
             # 托盘功能失败不应该阻止应用启动
             self.tray_manager = None
+    
+    def _init_pipewire_integration(self):
+        """初始化PipeWire集成到现有托盘"""
+        try:
+            self.logger.info("正在初始化PipeWire集成到现有托盘...")
+            
+            # 创建PipeWire集成实例
+            self.pipewire_integration = PipeWireManagerIntegration(self)
+            
+            # 设置WebView实例用于获取歌曲信息
+            if hasattr(self, 'web_view') and self.web_view:
+                self.pipewire_integration.set_webview(self.web_view)
+                self.logger.debug("PipeWire集成：WebView实例已设置")
+            
+            # 连接PipeWire通知信号到托盘
+            if (hasattr(self, 'tray_manager') and 
+                self.tray_manager and 
+                hasattr(self.tray_manager, 'qt_tray') and 
+                self.tray_manager.qt_tray):
+                self.pipewire_integration.restart_notification_requested.connect(
+                    self._on_pipewire_notification
+                )
+                self.logger.debug("PipeWire集成：通知信号已连接到托盘")
+            
+            self.logger.info("PipeWire集成到现有托盘成功")
+            
+        except Exception as e:
+            self.logger.error(f"初始化PipeWire集成失败: {e}", exc_info=True)
+            self.pipewire_integration = None
+    
+    def _on_pipewire_notification(self, message: str, is_error: bool = False):
+        """处理PipeWire通知"""
+        try:
+            if (hasattr(self, 'tray_manager') and 
+                self.tray_manager and 
+                hasattr(self.tray_manager, 'qt_tray') and 
+                self.tray_manager.qt_tray):
+                from PySide6.QtWidgets import QApplication
+                app_style = QApplication.style()
+                
+                if is_error:
+                    icon = app_style.standardIcon(app_style.StandardPixmap.SP_MessageBoxCritical)
+                else:
+                    icon = app_style.standardIcon(app_style.StandardPixmap.SP_MessageBoxInformation)
+                
+                self.tray_manager.qt_tray.showMessage(
+                    "PipeWire音频服务",
+                    message,
+                    icon,
+                    5000  # 显示5秒
+                )
+            else:
+                self.logger.warning("托盘不可用，无法显示PipeWire通知")
+                
+        except Exception as e:
+            self.logger.error(f"显示PipeWire通知失败: {e}", exc_info=True)
     
     def show_window(self):
         """显示窗口"""

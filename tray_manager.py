@@ -154,6 +154,24 @@ class TrayManager(QObject):
             # 分隔线
             menu.addSeparator()
             
+            # PipeWire状态菜单项
+            self.pipewire_status_action = QAction("PipeWire: 检查中...", self)
+            self.pipewire_status_action.setEnabled(False)  # 初始状态禁用
+            menu.addAction(self.pipewire_status_action)
+            
+            # PipeWire配置菜单项
+            pipewire_config_action = QAction("PipeWire配置", self)
+            pipewire_config_action.triggered.connect(self._on_qt_pipewire_config)
+            menu.addAction(pipewire_config_action)
+            
+            # 手动重启PipeWire菜单项
+            pipewire_restart_action = QAction("手动重启PipeWire", self)
+            pipewire_restart_action.triggered.connect(self._on_qt_pipewire_restart)
+            menu.addAction(pipewire_restart_action)
+            
+            # 分隔线
+            menu.addSeparator()
+            
             # 设置菜单项
             settings_action = QAction("设置", self)
             settings_action.triggered.connect(self._on_qt_settings)
@@ -185,11 +203,64 @@ class TrayManager(QObject):
         """Qt显示/隐藏窗口回调"""
         self.show_window_requested.emit()
     
+    def _on_qt_pipewire_config(self):
+        """Qt PipeWire配置回调"""
+        try:
+            if self.profile_manager:
+                config = self.profile_manager.get_pipewire_full_config()
+                config_text = "PipeWire配置:\n\n"
+                config_text += f"自动重启: {'启用' if config.get('auto_restart_enabled', False) else '禁用'}\n"
+                config_text += f"重启间隔: {config.get('restart_interval_songs', 16)}首歌\n"
+                config_text += f"显示通知: {'启用' if config.get('show_notifications', True) else '禁用'}\n"
+                config_text += f"服务检查间隔: {config.get('service_check_interval', 30)}秒\n"
+                config_text += f"重启超时: {config.get('restart_timeout', 10)}秒\n"
+                
+                if config.get('next_restart_countdown'):
+                    config_text += f"\n下次重启倒计时: {config['next_restart_countdown']}"
+                
+                self._show_info_dialog("PipeWire配置", config_text)
+            else:
+                self.logger.warning("Profile管理器未初始化")
+        except Exception as e:
+            self.logger.error(f"显示PipeWire配置失败: {e}", exc_info=True)
+    
+    def _on_qt_pipewire_restart(self):
+        """Qt手动重启PipeWire回调"""
+        try:
+            if self.pipewire_manager:
+                self.logger.info("用户请求手动重启PipeWire")
+                self._execute_pipewire_restart()
+            else:
+                self.logger.warning("PipeWire管理器未初始化")
+                self._show_info_dialog("错误", "PipeWire管理器未初始化")
+        except Exception as e:
+            self.logger.error(f"手动重启PipeWire失败: {e}", exc_info=True)
+    
+    def _show_info_dialog(self, title: str, message: str):
+        """显示信息对话框"""
+        try:
+            from PySide6.QtWidgets import QMessageBox
+            from PySide6.QtCore import QObject
+            
+            # 创建消息框
+            msg_box = QMessageBox()
+            msg_box.setWindowTitle(title)
+            msg_box.setText(message)
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.setIcon(QMessageBox.Icon.Information)
+            
+            # 显示对话框
+            msg_box.exec()
+            
+        except Exception as e:
+            self.logger.error(f"显示信息对话框失败: {e}", exc_info=True)
+    
     def _on_qt_settings(self):
         """Qt设置回调"""
         # 发送设置请求信号到主窗口
-        if hasattr(self.parent(), 'show_settings_dialog'):
-            self.parent().show_settings_dialog()
+        parent = self.parent()
+        if parent and hasattr(parent, 'show_settings_dialog'):
+            parent.show_settings_dialog()
         else:
             self.logger.warning("主窗口不支持设置对话框")
     
@@ -409,37 +480,20 @@ class TrayManager(QObject):
             self.logger.error(f"检查PipeWire重启失败: {e}", exc_info=True)
     
     def _is_good_restart_time(self) -> bool:
-        """判断是否是合适的重启时机"""
+        """判断是否是合适的重启时机 - 简化版本：只检查歌曲切换间隙"""
         try:
             # 检查管理器是否可用
             if not self.profile_manager:
                 return False
             
-            # 优先级1: 用户暂停播放时
-            if self.is_song_paused:
-                self.logger.debug("检测到播放暂停，这是重启的好时机")
-                return True
-            
-            # 优先级2: 歌曲切换间隙（最近5秒内有歌曲变化）
+            # 只检查歌曲切换间隙（最近5秒内有歌曲变化）
             current_time = time.time()
             if (self.last_song_change_time > 0 and 
                 current_time - self.last_song_change_time <= 5):
-                self.logger.debug("检测到歌曲切换间隙，这是重启的好时机")
+                self.logger.debug("检测到歌曲切换间隙，执行PipeWire重启")
                 return True
             
-            # 优先级3: 用户空闲时间超过30秒
-            if current_time - self.last_user_activity >= 30:
-                self.logger.debug("检测到用户空闲，这是重启的好时机")
-                return True
-            
-            # 优先级4: 如果重启时间已过期超过5分钟，强制重启
-            next_restart_time = self.profile_manager.get_pipewire_next_restart_time()
-            if (next_restart_time > 0 and 
-                current_time - next_restart_time >= 300):
-                self.logger.warning("重启时间已过期超过5分钟，强制执行重启")
-                return True
-            
-            self.logger.debug("当前不是重启的好时机")
+            self.logger.debug("当前不是歌曲切换间隙，等待合适时机")
             return False
             
         except Exception as e:
@@ -529,10 +583,21 @@ class TrayManager(QObject):
     def _on_pipewire_status_changed(self, is_available: bool, message: str):
         """PipeWire状态变化回调"""
         try:
-            if is_available:
-                self.logger.info(f"PipeWire服务状态: {message}")
+            # 更新托盘菜单中的PipeWire状态
+            if hasattr(self, 'pipewire_status_action') and self.pipewire_status_action:
+                if is_available:
+                    status_text = f"PipeWire: 正常运行"
+                    self.pipewire_status_action.setText(status_text)
+                    self.logger.info(f"PipeWire服务状态: {message}")
+                else:
+                    status_text = f"PipeWire: 服务异常"
+                    self.pipewire_status_action.setText(status_text)
+                    self.logger.warning(f"PipeWire服务状态异常: {message}")
             else:
-                self.logger.warning(f"PipeWire服务状态异常: {message}")
+                if is_available:
+                    self.logger.info(f"PipeWire服务状态: {message}")
+                else:
+                    self.logger.warning(f"PipeWire服务状态异常: {message}")
                 
         except Exception as e:
             self.logger.error(f"处理PipeWire状态变化失败: {e}", exc_info=True)
