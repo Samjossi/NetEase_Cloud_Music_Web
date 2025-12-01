@@ -542,10 +542,10 @@ class ProfileManager:
             if "auto_restart_enabled" in config:
                 validated_config["auto_restart_enabled"] = bool(config["auto_restart_enabled"])
             
-            if "restart_interval_hours" in config:
-                interval = float(config["restart_interval_hours"])
-                # 限制重启间隔在0.5到24小时之间
-                validated_config["restart_interval_hours"] = max(0.5, min(24.0, interval))
+            if "restart_interval_minutes" in config:
+                interval = int(config["restart_interval_minutes"])
+                # 限制重启间隔在30分钟到180分钟之间
+                validated_config["restart_interval_minutes"] = max(30, min(180, interval))
             
             if "show_notifications" in config:
                 validated_config["show_notifications"] = bool(config["show_notifications"])
@@ -553,13 +553,6 @@ class ProfileManager:
             if "last_restart_timestamp" in config:
                 timestamp = float(config["last_restart_timestamp"])
                 validated_config["last_restart_timestamp"] = timestamp
-            
-            if "next_restart_timestamp" in config:
-                timestamp = float(config["next_restart_timestamp"])
-                validated_config["next_restart_timestamp"] = timestamp
-            
-            if "skip_next_restart" in config:
-                validated_config["skip_next_restart"] = bool(config["skip_next_restart"])
             
             if "restart_command" in config and isinstance(config["restart_command"], str):
                 validated_config["restart_command"] = config["restart_command"]
@@ -571,14 +564,12 @@ class ProfileManager:
             return self._get_default_pipewire_config()
     
     def _get_default_pipewire_config(self) -> Dict[str, Any]:
-        """获取默认PipeWire配置 - 简化版本，使用固定值"""
+        """获取默认PipeWire配置 - 用户可配置版本"""
         return {
-            "auto_restart_enabled": True,  # 固定启用
-            "restart_interval_songs": "16",  # 固定16首歌重启一次
-            "show_notifications": True,  # 固定显示通知
+            "auto_restart_enabled": False,  # 默认关闭，用户自行选择
+            "restart_interval_minutes": 90,  # 默认90分钟重启一次
+            "show_notifications": True,  # 默认显示通知
             "last_restart_timestamp": 0.0,
-            "next_restart_timestamp": 0.0,
-            "skip_next_restart": False,
             "restart_command": "systemctl --user restart pipewire",
             "version": "1.0"
         }

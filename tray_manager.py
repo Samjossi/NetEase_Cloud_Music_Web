@@ -422,7 +422,7 @@ class TrayManager(QObject):
             self.logger.error(f"启动PipeWire检查定时器失败: {e}", exc_info=True)
     
     def _check_pipewire_restart(self):
-        """检查是否需要执行PipeWire重启"""
+        """检查是否需要执行PipeWire重启 - 基于分钟间隔的简化版本"""
         try:
             # 检查管理器是否可用
             if not self.profile_manager or not self.pipewire_manager:
@@ -432,19 +432,25 @@ class TrayManager(QObject):
             if not self.profile_manager.is_pipewire_auto_restart_enabled():
                 return
             
-            # 检查是否应该跳过下次重启
-            if self.profile_manager.should_skip_pipewire_restart():
+            # 获取配置
+            config = self.profile_manager.load_pipewire_config()
+            restart_interval_minutes = config.get("restart_interval_minutes", 90)
+            last_restart = config.get("last_restart_timestamp", 0.0)
+            
+            # 如果间隔为0，表示不重启
+            if restart_interval_minutes == 0:
                 return
             
             # 检查是否到了重启时间
-            if not self.profile_manager.is_pipewire_restart_due():
-                return
+            current_time = time.time()
+            elapsed_seconds = current_time - last_restart
+            elapsed_minutes = elapsed_seconds / 60
             
-            # 检查是否是合适的重启时机
-            if self._is_good_restart_time():
+            if elapsed_minutes >= restart_interval_minutes:
+                self.logger.info(f"PipeWire重启时间已到: 已过{elapsed_minutes:.1f}分钟，间隔{restart_interval_minutes}分钟")
                 self._execute_pipewire_restart()
             else:
-                self.logger.debug("当前不是PipeWire重启的合适时机")
+                self.logger.debug(f"PipeWire重启检查: 已过{elapsed_minutes:.1f}分钟，需要{restart_interval_minutes}分钟")
                 
         except Exception as e:
             self.logger.error(f"检查PipeWire重启失败: {e}", exc_info=True)
@@ -581,12 +587,41 @@ class TrayManager(QObject):
         self.logger.debug("检测到播放恢复")
     
     def get_next_restart_countdown(self) -> str:
-        """获取下次重启倒计时"""
+        """获取下次重启倒计时 - 基于分钟间隔"""
         try:
             if not self.profile_manager:
                 return "未知"
-            config = self.profile_manager.get_pipewire_full_config()
-            return config.get("next_restart_countdown", "未设置")
+            
+            config = self.profile_manager.load_pipewire_config()
+            restart_interval_minutes = config.get("restart_interval_minutes", 90)
+            last_restart = config.get("last_restart_timestamp", 0.0)
+            
+            if restart_interval_minutes == 0:
+                return "已禁用"
+            
+            if last_restart == 0.0:
+                return "未开始"
+            
+            current_time = time.time()
+            elapsed_seconds = current_time - last_restart
+            elapsed_minutes = elapsed_seconds / 60
+            
+            remaining_minutes = restart_interval_minutes - elapsed_minutes
+            
+            if remaining_minutes <= 0:
+                return "即将重启"
+            elif remaining_minutes < 1:
+                return f"{int(remaining_minutes * 60)}秒"
+            elif remaining_minutes < 60:
+                return f"{int(remaining_minutes)}分钟"
+            else:
+                hours = int(remaining_minutes // 60)
+                minutes = int(remaining_minutes % 60)
+                if minutes > 0:
+                    return f"{hours}小时{minutes}分钟"
+                else:
+                    return f"{hours}小时"
+                    
         except Exception as e:
             self.logger.error(f"获取重启倒计时失败: {e}")
             return "未知"

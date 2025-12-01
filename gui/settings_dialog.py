@@ -8,7 +8,7 @@ from typing import Optional
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
     QComboBox, QPushButton, QGroupBox, QRadioButton,
-    QButtonGroup, QMessageBox
+    QButtonGroup, QMessageBox, QCheckBox
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
@@ -36,7 +36,7 @@ class SettingsDialog(QDialog):
         try:
             self.setWindowTitle("设置")
             self.setModal(True)
-            self.setFixedSize(450, 350)
+            self.setFixedSize(500, 450)
             
             # 主布局
             layout = QVBoxLayout()
@@ -51,6 +51,36 @@ class SettingsDialog(QDialog):
             title_label.setFont(title_font)
             title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout.addWidget(title_label)
+            
+            # PipeWire设置组
+            pipewire_group = QGroupBox("PipeWire自动重启")
+            pipewire_layout = QVBoxLayout()
+            
+            # 自动重启复选框
+            self.pipewire_checkbox = QCheckBox("启用PipeWire自动重启")
+            self.pipewire_checkbox.setChecked(False)
+            pipewire_layout.addWidget(self.pipewire_checkbox)
+            
+            # 重启间隔设置
+            interval_layout = QHBoxLayout()
+            interval_label = QLabel("重启间隔：")
+            interval_layout.addWidget(interval_label)
+            
+            self.interval_combo = QComboBox()
+            self.interval_combo.addItems(["60分钟", "90分钟", "120分钟", "从不重启"])
+            self.interval_combo.setCurrentText("90分钟")
+            interval_layout.addWidget(self.interval_combo)
+            interval_layout.addStretch()
+            
+            pipewire_layout.addLayout(interval_layout)
+            
+            # 通知设置
+            self.notification_checkbox = QCheckBox("显示重启通知")
+            self.notification_checkbox.setChecked(True)
+            pipewire_layout.addWidget(self.notification_checkbox)
+            
+            pipewire_group.setLayout(pipewire_layout)
+            layout.addWidget(pipewire_group)
             
             # 关闭行为设置组
             close_group = QGroupBox("关闭行为")
@@ -204,6 +234,7 @@ class SettingsDialog(QDialog):
         """加载当前设置"""
         try:
             if hasattr(self.parent(), 'profile_manager') and self.parent().profile_manager:
+                # 加载关闭行为设置
                 close_behavior = self.parent().profile_manager.get_close_behavior()
                 action = close_behavior.get("action", "ask")
                 
@@ -219,13 +250,44 @@ class SettingsDialog(QDialog):
                 else:
                     # 默认选择询问
                     self.ask_radio.setChecked(True)
+                
+                # 加载PipeWire设置
+                pipewire_config = self.parent().profile_manager.load_pipewire_config()
+                auto_restart_enabled = pipewire_config.get("auto_restart_enabled", False)
+                restart_interval = pipewire_config.get("restart_interval_minutes", 90)
+                show_notifications = pipewire_config.get("show_notifications", True)
+                
+                self.logger.debug(f"加载PipeWire设置: 启用={auto_restart_enabled}, 间隔={restart_interval}分钟, 通知={show_notifications}")
+                
+                # 设置PipeWire相关控件
+                self.pipewire_checkbox.setChecked(auto_restart_enabled)
+                self.notification_checkbox.setChecked(show_notifications)
+                
+                # 设置重启间隔
+                if restart_interval == 60:
+                    self.interval_combo.setCurrentText("60分钟")
+                elif restart_interval == 90:
+                    self.interval_combo.setCurrentText("90分钟")
+                elif restart_interval == 120:
+                    self.interval_combo.setCurrentText("120分钟")
+                else:
+                    self.interval_combo.setCurrentText("从不重启")
+                    
             else:
                 self.logger.warning("无法访问Profile管理器，使用默认设置")
+                # 设置默认值
                 self.ask_radio.setChecked(True)
+                self.pipewire_checkbox.setChecked(False)
+                self.interval_combo.setCurrentText("90分钟")
+                self.notification_checkbox.setChecked(True)
                 
         except Exception as e:
             self.logger.error(f"加载当前设置失败: {e}")
+            # 设置默认值
             self.ask_radio.setChecked(True)
+            self.pipewire_checkbox.setChecked(False)
+            self.interval_combo.setCurrentText("90分钟")
+            self.notification_checkbox.setChecked(True)
     
     def get_selected_action(self) -> str:
         """获取用户选择的关闭行为"""
@@ -246,14 +308,40 @@ class SettingsDialog(QDialog):
             selected_action = self.get_selected_action()
             self.logger.info(f"用户选择关闭行为: {selected_action}")
             
+            # 获取PipeWire设置
+            pipewire_enabled = self.pipewire_checkbox.isChecked()
+            interval_text = self.interval_combo.currentText()
+            show_notifications = self.notification_checkbox.isChecked()
+            
+            # 解析重启间隔
+            if interval_text == "60分钟":
+                restart_interval = 60
+            elif interval_text == "90分钟":
+                restart_interval = 90
+            elif interval_text == "120分钟":
+                restart_interval = 120
+            else:  # "从不重启"
+                restart_interval = 0
+                pipewire_enabled = False
+            
+            self.logger.info(f"用户选择PipeWire设置: 启用={pipewire_enabled}, 间隔={restart_interval}分钟, 通知={show_notifications}")
+            
             if hasattr(self.parent(), 'profile_manager') and self.parent().profile_manager:
-                # 保存用户设置
-                success = self.parent().profile_manager.update_close_behavior(
+                # 保存关闭行为设置
+                close_success = self.parent().profile_manager.update_close_behavior(
                     selected_action, 
                     remember_choice=False  # 不记住选择，让用户下次仍然可以更改
                 )
                 
-                if success:
+                # 保存PipeWire设置
+                pipewire_success = self.parent().profile_manager.save_pipewire_config({
+                    "auto_restart_enabled": pipewire_enabled,
+                    "restart_interval_minutes": restart_interval,
+                    "show_notifications": show_notifications,
+                    "restart_command": "systemctl --user restart pipewire"
+                })
+                
+                if close_success and pipewire_success:
                     self.logger.info("设置保存成功")
                     self.settings_changed = True
                     self.accept()
