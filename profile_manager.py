@@ -571,11 +571,11 @@ class ProfileManager:
             return self._get_default_pipewire_config()
     
     def _get_default_pipewire_config(self) -> Dict[str, Any]:
-        """获取默认PipeWire配置"""
+        """获取默认PipeWire配置 - 简化版本，使用固定值"""
         return {
-            "auto_restart_enabled": True,
-            "restart_interval_hours": 1.0,
-            "show_notifications": True,
+            "auto_restart_enabled": True,  # 固定启用
+            "restart_interval_songs": "16",  # 固定16首歌重启一次
+            "show_notifications": True,  # 固定显示通知
             "last_restart_timestamp": 0.0,
             "next_restart_timestamp": 0.0,
             "skip_next_restart": False,
