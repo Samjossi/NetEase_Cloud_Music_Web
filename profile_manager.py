@@ -479,6 +479,322 @@ class ProfileManager:
         except Exception as e:
             self.logger.error(f"获取关闭行为偏好失败: {e}")
             return self._get_default_user_preferences()["close_behavior"]
+    
+    def get_pipewire_config_path(self) -> str:
+        """获取PipeWire配置文件路径"""
+        return os.path.join(self.storage_path, "pipewire_config.json")
+    
+    def save_pipewire_config(self, config: Dict[str, Any]) -> bool:
+        """保存PipeWire配置"""
+        try:
+            config_path = self.get_pipewire_config_path()
+            
+            # 添加版本信息和时间戳
+            config["version"] = "1.0"
+            config["last_updated"] = time.strftime("%Y-%m-%d %H:%M:%S")
+            
+            # 验证配置
+            validated_config = self._validate_pipewire_config(config)
+            
+            # 原子写入，避免文件损坏
+            temp_path = config_path + ".tmp"
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json.dump(validated_config, f, indent=2, ensure_ascii=False)
+            
+            os.replace(temp_path, config_path)
+            
+            self.logger.debug(f"PipeWire配置已保存: {config_path}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"保存PipeWire配置失败: {e}")
+            return False
+    
+    def load_pipewire_config(self) -> Dict[str, Any]:
+        """加载PipeWire配置"""
+        try:
+            config_path = self.get_pipewire_config_path()
+            
+            if not os.path.exists(config_path):
+                self.logger.debug("PipeWire配置文件不存在，返回默认配置")
+                return self._get_default_pipewire_config()
+            
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            
+            # 验证配置完整性
+            validated_config = self._validate_pipewire_config(config)
+            
+            self.logger.debug(f"PipeWire配置加载成功，最后更新: {config.get('last_updated', 'unknown')}")
+            return validated_config
+            
+        except Exception as e:
+            self.logger.error(f"加载PipeWire配置失败: {e}")
+            return self._get_default_pipewire_config()
+    
+    def _validate_pipewire_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """验证PipeWire配置"""
+        try:
+            default_config = self._get_default_pipewire_config()
+            validated_config = default_config.copy()
+            
+            # 验证并更新配置项
+            if "auto_restart_enabled" in config:
+                validated_config["auto_restart_enabled"] = bool(config["auto_restart_enabled"])
+            
+            if "restart_interval_hours" in config:
+                interval = float(config["restart_interval_hours"])
+                # 限制重启间隔在0.5到24小时之间
+                validated_config["restart_interval_hours"] = max(0.5, min(24.0, interval))
+            
+            if "show_notifications" in config:
+                validated_config["show_notifications"] = bool(config["show_notifications"])
+            
+            if "last_restart_timestamp" in config:
+                timestamp = float(config["last_restart_timestamp"])
+                validated_config["last_restart_timestamp"] = timestamp
+            
+            if "next_restart_timestamp" in config:
+                timestamp = float(config["next_restart_timestamp"])
+                validated_config["next_restart_timestamp"] = timestamp
+            
+            if "skip_next_restart" in config:
+                validated_config["skip_next_restart"] = bool(config["skip_next_restart"])
+            
+            if "restart_command" in config and isinstance(config["restart_command"], str):
+                validated_config["restart_command"] = config["restart_command"]
+            
+            return validated_config
+            
+        except Exception as e:
+            self.logger.error(f"验证PipeWire配置失败: {e}")
+            return self._get_default_pipewire_config()
+    
+    def _get_default_pipewire_config(self) -> Dict[str, Any]:
+        """获取默认PipeWire配置"""
+        return {
+            "auto_restart_enabled": True,
+            "restart_interval_hours": 1.0,
+            "show_notifications": True,
+            "last_restart_timestamp": 0.0,
+            "next_restart_timestamp": 0.0,
+            "skip_next_restart": False,
+            "restart_command": "systemctl --user restart pipewire",
+            "version": "1.0"
+        }
+    
+    def update_pipewire_restart_time(self, restart_timestamp: float) -> bool:
+        """更新PipeWire重启时间"""
+        try:
+            config = self.load_pipewire_config()
+            
+            # 更新重启时间
+            config["last_restart_timestamp"] = restart_timestamp
+            
+            # 计算下次重启时间
+            interval_hours = config["restart_interval_hours"]
+            next_restart_time = restart_timestamp + (interval_hours * 3600)
+            config["next_restart_timestamp"] = next_restart_time
+            
+            # 重置跳过标志
+            config["skip_next_restart"] = False
+            
+            # 保存配置
+            success = self.save_pipewire_config(config)
+            
+            if success:
+                self.logger.info(f"PipeWire重启时间已更新: 上次={restart_timestamp}, 下次={next_restart_time}")
+            else:
+                self.logger.error("更新PipeWire重启时间失败")
+            
+            return success
+            
+        except Exception as e:
+            self.logger.error(f"更新PipeWire重启时间失败: {e}")
+            return False
+    
+    def get_pipewire_next_restart_time(self) -> float:
+        """获取下次PipeWire重启时间"""
+        try:
+            config = self.load_pipewire_config()
+            return config.get("next_restart_timestamp", 0.0)
+        except Exception as e:
+            self.logger.error(f"获取下次PipeWire重启时间失败: {e}")
+            return 0.0
+    
+    def is_pipewire_restart_due(self) -> bool:
+        """检查是否到了PipeWire重启时间"""
+        try:
+            current_time = time.time()
+            next_restart_time = self.get_pipewire_next_restart_time()
+            
+            # 检查是否到了重启时间
+            is_due = current_time >= next_restart_time and next_restart_time > 0
+            
+            if is_due:
+                self.logger.info(f"PipeWire重启时间已到: 当前={current_time}, 计划={next_restart_time}")
+            
+            return is_due
+            
+        except Exception as e:
+            self.logger.error(f"检查PipeWire重启时间失败: {e}")
+            return False
+    
+    def should_skip_pipewire_restart(self) -> bool:
+        """检查是否应该跳过下次PipeWire重启"""
+        try:
+            config = self.load_pipewire_config()
+            return config.get("skip_next_restart", False)
+        except Exception as e:
+            self.logger.error(f"检查PipeWire跳过重启标志失败: {e}")
+            return False
+    
+    def set_skip_pipewire_restart(self, skip: bool) -> bool:
+        """设置是否跳过下次PipeWire重启"""
+        try:
+            config = self.load_pipewire_config()
+            config["skip_next_restart"] = skip
+            
+            success = self.save_pipewire_config(config)
+            
+            if success:
+                self.logger.info(f"PipeWire跳过重启标志已设置: {skip}")
+            
+            return success
+            
+        except Exception as e:
+            self.logger.error(f"设置PipeWire跳过重启标志失败: {e}")
+            return False
+    
+    def is_pipewire_auto_restart_enabled(self) -> bool:
+        """检查PipeWire自动重启是否启用"""
+        try:
+            config = self.load_pipewire_config()
+            return config.get("auto_restart_enabled", True)
+        except Exception as e:
+            self.logger.error(f"检查PipeWire自动重启状态失败: {e}")
+            return False
+    
+    def enable_pipewire_auto_restart(self, enabled: bool) -> bool:
+        """启用或禁用PipeWire自动重启"""
+        try:
+            config = self.load_pipewire_config()
+            config["auto_restart_enabled"] = enabled
+            
+            # 如果启用，重新计算下次重启时间
+            if enabled:
+                current_time = time.time()
+                interval_hours = config["restart_interval_hours"]
+                next_restart_time = current_time + (interval_hours * 3600)
+                config["next_restart_timestamp"] = next_restart_time
+                self.logger.info(f"PipeWire自动重启已启用，下次重启时间: {next_restart_time}")
+            else:
+                config["next_restart_timestamp"] = 0.0
+                self.logger.info("PipeWire自动重启已禁用")
+            
+            success = self.save_pipewire_config(config)
+            return success
+            
+        except Exception as e:
+            self.logger.error(f"设置PipeWire自动重启状态失败: {e}")
+            return False
+    
+    def get_pipewire_restart_interval(self) -> float:
+        """获取PipeWire重启间隔（小时）"""
+        try:
+            config = self.load_pipewire_config()
+            return config.get("restart_interval_hours", 1.0)
+        except Exception as e:
+            self.logger.error(f"获取PipeWire重启间隔失败: {e}")
+            return 1.0
+    
+    def set_pipewire_restart_interval(self, interval_hours: float) -> bool:
+        """设置PipeWire重启间隔（小时）"""
+        try:
+            # 限制间隔范围
+            interval_hours = max(0.5, min(24.0, interval_hours))
+            
+            config = self.load_pipewire_config()
+            config["restart_interval_hours"] = interval_hours
+            
+            # 重新计算下次重启时间
+            if config.get("auto_restart_enabled", False):
+                current_time = time.time()
+                next_restart_time = current_time + (interval_hours * 3600)
+                config["next_restart_timestamp"] = next_restart_time
+                self.logger.info(f"PipeWire重启间隔已更新: {interval_hours}小时, 下次重启: {next_restart_time}")
+            
+            success = self.save_pipewire_config(config)
+            return success
+            
+        except Exception as e:
+            self.logger.error(f"设置PipeWire重启间隔失败: {e}")
+            return False
+    
+    def get_pipewire_full_config(self) -> Dict[str, Any]:
+        """获取完整的PipeWire配置信息"""
+        try:
+            config = self.load_pipewire_config()
+            
+            # 添加格式化的时间信息
+            current_time = time.time()
+            
+            # 格式化上次重启时间
+            last_restart = config.get("last_restart_timestamp", 0.0)
+            if last_restart > 0:
+                config["last_restart_formatted"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(last_restart))
+                config["last_restart_relative"] = self._format_relative_time(current_time - last_restart)
+            else:
+                config["last_restart_formatted"] = "从未重启"
+                config["last_restart_relative"] = "从未"
+            
+            # 格式化下次重启时间
+            next_restart = config.get("next_restart_timestamp", 0.0)
+            if next_restart > 0:
+                config["next_restart_formatted"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(next_restart))
+                if current_time < next_restart:
+                    config["next_restart_countdown"] = self._format_relative_time(next_restart - current_time)
+                    config["restart_overdue"] = False
+                else:
+                    config["next_restart_countdown"] = "已过期"
+                    config["restart_overdue"] = True
+            else:
+                config["next_restart_formatted"] = "未设置"
+                config["next_restart_countdown"] = "未设置"
+                config["restart_overdue"] = False
+            
+            return config
+            
+        except Exception as e:
+            self.logger.error(f"获取PipeWire完整配置失败: {e}")
+            return self._get_default_pipewire_config()
+    
+    def _format_relative_time(self, seconds: float) -> str:
+        """格式化相对时间"""
+        try:
+            if seconds < 0:
+                return "刚刚"
+            elif seconds < 60:
+                return f"{int(seconds)}秒"
+            elif seconds < 3600:
+                minutes = int(seconds // 60)
+                return f"{minutes}分钟"
+            elif seconds < 86400:
+                hours = int(seconds // 3600)
+                minutes = int((seconds % 3600) // 60)
+                if minutes > 0:
+                    return f"{hours}小时{minutes}分钟"
+                else:
+                    return f"{hours}小时"
+            else:
+                days = int(seconds // 86400)
+                hours = int((seconds % 86400) // 3600)
+                if hours > 0:
+                    return f"{days}天{hours}小时"
+                else:
+                    return f"{days}天"
+        except Exception:
+            return "时间格式化失败"
 
     def get_profile(self) -> Optional[QWebEngineProfile]:
         """获取Profile实例"""
