@@ -135,10 +135,6 @@ class NetEaseMusicWindow(QMainWindow):
             # 创建托盘管理器
             self.tray_manager = TrayManager(self)
             
-            # 设置WebView实例给托盘管理器（用于获取歌曲信息）
-            if hasattr(self, 'web_view') and self.web_view:
-                self.tray_manager.set_webview(self.web_view)
-            
             # 连接托盘信号
             self.tray_manager.show_window_requested.connect(self.show_window)
             self.tray_manager.exit_requested.connect(self.exit_application)

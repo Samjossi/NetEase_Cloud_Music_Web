@@ -35,17 +35,11 @@ class TrayManager(QObject):
         # 托盘相关属性
         self.is_visible = False
         self.qt_tray = None
-        self.song_update_timer = None
-        self.current_song_info = "网易云音乐"
         
         # PipeWire相关属性
         self.pipewire_timer = None
         self.pipewire_manager = None
         self.profile_manager = None
-        self.last_song_change_time = 0
-        self.is_song_paused = False
-        self.user_idle_time = 0
-        self.last_user_activity = time.time()
         
         # 初始化PipeWire管理器
         self._init_pipewire_manager()
@@ -95,9 +89,6 @@ class TrayManager(QObject):
             # 显示托盘
             self.qt_tray.show()
             self.is_visible = True
-            
-            # 启动歌曲信息更新定时器
-            self._start_song_update_timer()
             
             self.logger.info("Qt系统托盘初始化成功")
             
@@ -238,142 +229,6 @@ class TrayManager(QObject):
         """Qt退出程序回调"""
         self.exit_requested.emit()
     
-    def _start_song_update_timer(self):
-        """启动歌曲信息更新定时器"""
-        try:
-            if self.song_update_timer:
-                self.song_update_timer.stop()
-            
-            self.song_update_timer = QTimer()
-            self.song_update_timer.timeout.connect(self._update_song_info)
-            self.song_update_timer.start(3000)  # 每3秒更新一次
-            
-            self.logger.debug("歌曲信息更新定时器已启动")
-            
-        except Exception as e:
-            self.logger.error(f"启动歌曲更新定时器失败: {e}", exc_info=True)
-    
-    def _update_song_info(self):
-        """更新歌曲信息显示"""
-        try:
-            # 这个方法需要从主窗口获取WebView实例来执行JavaScript
-            # 我们将在主程序集成时提供WebView实例的引用
-            if hasattr(self, 'web_view') and self.web_view:
-                self._extract_song_info_from_webview()
-            else:
-                self.logger.debug("WebView未设置，跳过歌曲信息更新")
-                
-        except Exception as e:
-            self.logger.error(f"更新歌曲信息失败: {e}", exc_info=True)
-    
-    def set_webview(self, web_view):
-        """设置WebView实例用于获取歌曲信息"""
-        self.web_view = web_view
-        self.logger.debug("WebView实例已设置")
-    
-    def _extract_song_info_from_webview(self):
-        """从WebView提取歌曲信息"""
-        try:
-            if not self.web_view:
-                return
-            
-            # JavaScript代码提取歌曲信息
-            js_code = """
-            (function() {
-                try {
-                    // 多选择器匹配策略
-                    var selectors = [
-                        '.song-name',
-                        '.current-song', 
-                        '.music-name',
-                        '.title',
-                        '[class*="song"]',
-                        '[class*="music"]',
-                        '[class*="title"]',
-                        '.player-song-name',
-                        '.song-title',
-                        '.music-title'
-                    ];
-                    
-                    var songName = '';
-                    var artistName = '';
-                    
-                    // 尝试获取歌曲名称
-                    for (var i = 0; i < selectors.length; i++) {
-                        var element = document.querySelector(selectors[i]);
-                        if (element && element.textContent && element.textContent.trim()) {
-                            songName = element.textContent.trim();
-                            break;
-                        }
-                    }
-                    
-                    // 尝试获取艺术家名称
-                    var artistSelectors = [
-                        '.artist-name',
-                        '.artist',
-                        '.singer',
-                        '[class*="artist"]',
-                        '[class*="singer"]',
-                        '.player-artist-name'
-                    ];
-                    
-                    for (var i = 0; i < artistSelectors.length; i++) {
-                        var element = document.querySelector(artistSelectors[i]);
-                        if (element && element.textContent && element.textContent.trim()) {
-                            artistName = element.textContent.trim();
-                            break;
-                        }
-                    }
-                    
-                    // 组合显示信息
-                    var displayInfo = '';
-                    if (songName && artistName) {
-                        displayInfo = songName + ' - ' + artistName;
-                    } else if (songName) {
-                        displayInfo = songName;
-                    } else {
-                        displayInfo = '网易云音乐';
-                    }
-                    
-                    return {
-                        success: true,
-                        songName: songName,
-                        artistName: artistName,
-                        displayInfo: displayInfo,
-                        url: window.location.href
-                    };
-                    
-                } catch (e) {
-                    return {
-                        success: false,
-                        error: e.message,
-                        displayInfo: '网易云音乐'
-                    };
-                }
-            })();
-            """
-            
-            self.web_view.page().runJavaScript(js_code, self._on_song_info_result)
-            
-        except Exception as e:
-            self.logger.error(f"提取歌曲信息失败: {e}", exc_info=True)
-    
-    def _on_song_info_result(self, result):
-        """处理歌曲信息提取结果"""
-        try:
-            if result and isinstance(result, dict):
-                if result.get("success"):
-                    new_info = result.get("displayInfo", "网易云音乐")
-                    if new_info != self.current_song_info:
-                        self.current_song_info = new_info
-                        self.on_song_changed()  # 通知歌曲变化
-                        self._update_tray_display()
-                        self.logger.info(f"歌曲信息更新: {self.current_song_info}")
-                else:
-                    self.logger.debug(f"歌曲信息提取失败: {result.get('error', '未知错误')}")
-                    
-        except Exception as e:
-            self.logger.error(f"处理歌曲信息结果失败: {e}", exc_info=True)
     
     def show_window(self):
         """显示窗口的公共方法"""
@@ -455,26 +310,6 @@ class TrayManager(QObject):
         except Exception as e:
             self.logger.error(f"检查PipeWire重启失败: {e}", exc_info=True)
     
-    def _is_good_restart_time(self) -> bool:
-        """判断是否是合适的重启时机 - 简化版本：只检查歌曲切换间隙"""
-        try:
-            # 检查管理器是否可用
-            if not self.profile_manager:
-                return False
-            
-            # 只检查歌曲切换间隙（最近5秒内有歌曲变化）
-            current_time = time.time()
-            if (self.last_song_change_time > 0 and 
-                current_time - self.last_song_change_time <= 5):
-                self.logger.debug("检测到歌曲切换间隙，执行PipeWire重启")
-                return True
-            
-            self.logger.debug("当前不是歌曲切换间隙，等待合适时机")
-            return False
-            
-        except Exception as e:
-            self.logger.error(f"判断重启时机失败: {e}", exc_info=True)
-            return False
     
     def _execute_pipewire_restart(self):
         """执行PipeWire重启"""
@@ -567,24 +402,6 @@ class TrayManager(QObject):
         except Exception as e:
             self.logger.error(f"处理PipeWire状态变化失败: {e}", exc_info=True)
     
-    def update_user_activity(self):
-        """更新用户活动时间"""
-        self.last_user_activity = time.time()
-    
-    def on_song_changed(self):
-        """歌曲变化回调"""
-        self.last_song_change_time = time.time()
-        self.logger.debug("检测到歌曲变化")
-    
-    def on_playback_paused(self):
-        """播放暂停回调"""
-        self.is_song_paused = True
-        self.logger.debug("检测到播放暂停")
-    
-    def on_playback_resumed(self):
-        """播放恢复回调"""
-        self.is_song_paused = False
-        self.logger.debug("检测到播放恢复")
     
     def get_next_restart_countdown(self) -> str:
         """获取下次重启倒计时 - 基于分钟间隔"""
@@ -627,13 +444,13 @@ class TrayManager(QObject):
             return "未知"
     
     def _update_tray_display(self):
-        """更新托盘显示信息"""
+        """更新托盘显示信息 - 简化版本"""
         try:
             if not self.qt_tray:
                 return
             
             # 构建工具提示文本
-            tooltip = self.current_song_info
+            tooltip = "网易云音乐"
             
             # 如果PipeWire自动重启启用，添加倒计时信息
             if self.profile_manager and self.profile_manager.is_pipewire_auto_restart_enabled():
@@ -652,10 +469,6 @@ class TrayManager(QObject):
             self.logger.info("正在清理系统托盘资源...")
             
             # 停止定时器
-            if self.song_update_timer:
-                self.song_update_timer.stop()
-                self.song_update_timer = None
-            
             if self.pipewire_timer:
                 self.pipewire_timer.stop()
                 self.pipewire_timer = None
