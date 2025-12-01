@@ -93,19 +93,9 @@ def main():
         app_logger.info("正在创建主窗口...")
         window = NetEaseMusicWindow()
         
-        # 初始化PipeWire集成用于后台自动重启
-        app_logger.info("正在初始化PipeWire后台自动重启系统...")
-        try:
-            pipewire_integration = PipeWireManagerIntegration(window)
-            # 设置WebView实例用于获取歌曲信息
-            if hasattr(window, 'web_view') and window.web_view:
-                pipewire_integration.set_webview(window.web_view)
-                app_logger.info("PipeWire集成系统启动成功")
-            else:
-                app_logger.warning("WebView未设置，PipeWire歌曲监控功能不可用")
-        except Exception as e:
-            app_logger.error(f"初始化PipeWire集成系统失败: {e}")
-            app_logger.info("应用将继续运行，但PipeWire自动重启功能不可用")
+        # PipeWire集成已在NetEaseMusicWindow的_init_pipewire_integration中初始化
+        # 不需要在这里重复创建，避免重复事件处理
+        app_logger.info("PipeWire集成系统将在主窗口中初始化")
         
         # 显示窗口
         window.show()

@@ -298,8 +298,21 @@ class TrayManager(QObject):
             
             # 检查是否到了重启时间
             current_time = time.time()
+            
+            # 修复：如果last_restart为0，表示从未重启过，设置为当前时间
+            if last_restart <= 0.0:
+                self.logger.info("检测到首次运行，初始化重启时间戳")
+                self.profile_manager.update_pipewire_restart_time(current_time)
+                return
+            
             elapsed_seconds = current_time - last_restart
             elapsed_minutes = elapsed_seconds / 60
+            
+            # 添加边界检查，防止异常大的时间差
+            if elapsed_minutes > 100000:  # 如果超过10万分钟，说明有问题
+                self.logger.warning(f"检测到异常时间差: {elapsed_minutes:.1f}分钟，重置时间戳")
+                self.profile_manager.update_pipewire_restart_time(current_time)
+                return
             
             if elapsed_minutes >= restart_interval_minutes:
                 self.logger.info(f"PipeWire重启时间已到: 已过{elapsed_minutes:.1f}分钟，间隔{restart_interval_minutes}分钟")

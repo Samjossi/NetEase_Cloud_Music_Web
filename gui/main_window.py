@@ -429,7 +429,9 @@ class NetEaseMusicWindow(QMainWindow):
         """验证 localStorage 配置和音量设置"""
         try:
             # 延迟执行，确保页面完全加载
-            QTimer.singleShot(2000, self._check_localstorage_and_volume)
+            # 增加延迟时间，并添加多次重试机制
+            self._localStorage_retry_count = 0
+            QTimer.singleShot(3000, self._check_localstorage_and_volume)
         except Exception as e:
             self.logger.error(f"验证 localStorage 和音量设置失败: {e}")
     
@@ -491,7 +493,8 @@ class NetEaseMusicWindow(QMainWindow):
         """处理 localStorage 检查结果"""
         try:
             if not result:
-                self.logger.warning("localStorage 检查返回空结果")
+                # 实现重试机制
+                self._handle_localstorage_retry("检查返回空结果")
                 return
             
             if isinstance(result, dict):
@@ -516,10 +519,32 @@ class NetEaseMusicWindow(QMainWindow):
                     
                 else:
                     error_msg = result.get("error", "未知错误")
-                    self.logger.warning(f"localStorage 不可用或配置错误: {error_msg}")
+                    self._handle_localstorage_retry(f"localStorage 不可用或配置错误: {error_msg}")
                     
         except Exception as e:
             self.logger.error(f"处理 localStorage 检查结果失败: {e}")
+    
+    def _handle_localstorage_retry(self, error_msg: str):
+        """处理localStorage检查重试"""
+        try:
+            # 检查重试次数
+            if not hasattr(self, '_localStorage_retry_count'):
+                self._localStorage_retry_count = 0
+            
+            self._localStorage_retry_count += 1
+            
+            if self._localStorage_retry_count <= 3:
+                # 重试，延迟递增
+                delay = 2000 * self._localStorage_retry_count  # 2秒, 4秒, 6秒
+                self.logger.warning(f"localStorage 检查失败（第{self._localStorage_retry_count}次重试）: {error_msg}")
+                QTimer.singleShot(delay, self._check_localstorage_and_volume)
+            else:
+                # 超过重试次数，记录警告但不再重试
+                self.logger.warning(f"localStorage 检查最终失败（已重试{self._localStorage_retry_count-1}次）: {error_msg}")
+                self.logger.info("localStorage 功能可能不可用，但应用仍可正常运行")
+                
+        except Exception as e:
+            self.logger.error(f"处理 localStorage 重试失败: {e}")
     
     def on_title_changed(self, title):
         """页面标题变化"""

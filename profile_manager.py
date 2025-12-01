@@ -191,18 +191,39 @@ class ProfileManager:
                 self.logger.warning("登录数据目录为空")
                 return False
             
-            # 检查关键文件
-            critical_files = ["Cookies", "Web Data", "Local Storage"]
+            # 检查关键文件 - 更新WebKit数据结构认知
+            # 现代WebKit可能不创建所有传统文件，或者文件名有所不同
+            critical_files = ["Cookies"]  # Cookies是最关键的
+            optional_files = ["Web Data", "Local Storage", "Cookies-journal", "Web Data-journal", "Local Storage-journal"]
             existing_files = [f["name"] for f in data_info["files"]]
             
-            missing_files = [f for f in critical_files if f not in existing_files]
-            if missing_files:
-                self.logger.warning(f"缺少关键登录文件: {missing_files}")
+            missing_critical = [f for f in critical_files if f not in existing_files]
+            if missing_critical:
+                self.logger.warning(f"缺少关键登录文件: {missing_critical}")
+            else:
+                # 如果关键文件存在，检查可选文件
+                missing_optional = [f for f in optional_files if f not in existing_files]
+                if missing_optional:
+                    self.logger.debug(f"缺少可选登录文件（正常）: {missing_optional}")
             
-            # 检查文件大小（避免空文件）
-            tiny_files = [f["name"] for f in data_info["files"] if f["size"] < 100]
+            # 检查文件大小 - 调整阈值，journal文件为空是正常的
+            normal_empty_files = ["-journal", "-wal", "-shm"]  # SQLite的辅助文件通常为空或很小
+            tiny_files = []
+            
+            for file_info in data_info["files"]:
+                file_name = file_info["name"]
+                file_size = file_info["size"]
+                
+                # 检查是否是正常的空文件类型
+                is_normal_empty = any(suffix in file_name for suffix in normal_empty_files)
+                
+                if not is_normal_empty and file_size < 100:
+                    tiny_files.append(file_name)
+            
             if tiny_files:
                 self.logger.warning(f"检测到过小的文件（可能损坏）: {tiny_files}")
+            else:
+                self.logger.debug("文件大小检查通过，无异常小文件")
             
             # 至少有一个数据文件且有内容
             valid_files = [f for f in data_info["files"] if f["size"] > 0]

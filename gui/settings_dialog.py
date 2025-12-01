@@ -56,11 +56,6 @@ class SettingsDialog(QDialog):
             pipewire_group = QGroupBox("PipeWire自动重启")
             pipewire_layout = QVBoxLayout()
             
-            # 自动重启复选框
-            self.pipewire_checkbox = QCheckBox("启用PipeWire自动重启")
-            self.pipewire_checkbox.setChecked(False)
-            pipewire_layout.addWidget(self.pipewire_checkbox)
-            
             # 重启间隔设置
             interval_layout = QHBoxLayout()
             interval_label = QLabel("重启间隔：")
@@ -259,34 +254,34 @@ class SettingsDialog(QDialog):
                 
                 self.logger.debug(f"加载PipeWire设置: 启用={auto_restart_enabled}, 间隔={restart_interval}分钟, 通知={show_notifications}")
                 
-                # 设置PipeWire相关控件
-                self.pipewire_checkbox.setChecked(auto_restart_enabled)
+                # 设置通知选项
                 self.notification_checkbox.setChecked(show_notifications)
                 
-                # 设置重启间隔
-                if restart_interval == 60:
+                # 设置重启间隔（根据auto_restart_enabled状态来决定显示什么）
+                if not auto_restart_enabled:
+                    self.interval_combo.setCurrentText("从不重启")
+                elif restart_interval == 60:
                     self.interval_combo.setCurrentText("60分钟")
                 elif restart_interval == 90:
                     self.interval_combo.setCurrentText("90分钟")
                 elif restart_interval == 120:
                     self.interval_combo.setCurrentText("120分钟")
                 else:
-                    self.interval_combo.setCurrentText("从不重启")
+                    # 如果间隔无效但启用状态为true，使用默认值
+                    self.interval_combo.setCurrentText("90分钟")
                     
             else:
                 self.logger.warning("无法访问Profile管理器，使用默认设置")
                 # 设置默认值
                 self.ask_radio.setChecked(True)
-                self.pipewire_checkbox.setChecked(False)
-                self.interval_combo.setCurrentText("90分钟")
+                self.interval_combo.setCurrentText("从不重启")
                 self.notification_checkbox.setChecked(True)
                 
         except Exception as e:
             self.logger.error(f"加载当前设置失败: {e}")
             # 设置默认值
             self.ask_radio.setChecked(True)
-            self.pipewire_checkbox.setChecked(False)
-            self.interval_combo.setCurrentText("90分钟")
+            self.interval_combo.setCurrentText("从不重启")
             self.notification_checkbox.setChecked(True)
     
     def get_selected_action(self) -> str:
@@ -309,20 +304,22 @@ class SettingsDialog(QDialog):
             self.logger.info(f"用户选择关闭行为: {selected_action}")
             
             # 获取PipeWire设置
-            pipewire_enabled = self.pipewire_checkbox.isChecked()
             interval_text = self.interval_combo.currentText()
             show_notifications = self.notification_checkbox.isChecked()
             
-            # 解析重启间隔
+            # 根据下拉框选择自动判断是否启用重启和间隔
             if interval_text == "60分钟":
+                pipewire_enabled = True
                 restart_interval = 60
             elif interval_text == "90分钟":
+                pipewire_enabled = True
                 restart_interval = 90
             elif interval_text == "120分钟":
+                pipewire_enabled = True
                 restart_interval = 120
             else:  # "从不重启"
-                restart_interval = 0
                 pipewire_enabled = False
+                restart_interval = 0
             
             self.logger.info(f"用户选择PipeWire设置: 启用={pipewire_enabled}, 间隔={restart_interval}分钟, 通知={show_notifications}")
             
