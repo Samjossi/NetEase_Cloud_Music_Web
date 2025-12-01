@@ -191,20 +191,20 @@ class ProfileManager:
                 self.logger.warning("登录数据目录为空")
                 return False
             
-            # 检查关键文件 - 更新WebKit数据结构认知
-            # 现代WebKit可能不创建所有传统文件，或者文件名有所不同
-            critical_files = ["Cookies"]  # Cookies是最关键的
-            optional_files = ["Web Data", "Local Storage", "Cookies-journal", "Web Data-journal", "Local Storage-journal"]
+            # 检查关键文件 - 现代WebKit数据结构简化验证
+            # 只检查真正关键的登录文件，其他都是可选的
+            critical_files = ["Cookies"]  # Cookies是唯一关键的登录凭证
             existing_files = [f["name"] for f in data_info["files"]]
             
             missing_critical = [f for f in critical_files if f not in existing_files]
             if missing_critical:
                 self.logger.warning(f"缺少关键登录文件: {missing_critical}")
+                return False  # 如果缺少关键文件，直接返回无效
             else:
-                # 如果关键文件存在，检查可选文件
-                missing_optional = [f for f in optional_files if f not in existing_files]
-                if missing_optional:
-                    self.logger.debug(f"缺少可选登录文件（正常）: {missing_optional}")
+                self.logger.debug("✓ 关键登录文件检查通过")
+                
+            # 不再检查可选文件，因为现代WebKit数据结构变化很大
+            # "Web Data", "Local Storage" 等文件可能不存在，这是正常的
             
             # 检查文件大小 - 调整阈值，journal文件为空是正常的
             normal_empty_files = ["-journal", "-wal", "-shm"]  # SQLite的辅助文件通常为空或很小

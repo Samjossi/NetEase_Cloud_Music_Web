@@ -781,10 +781,21 @@ class NetEaseMusicWindow(QMainWindow):
                 self.tray_manager.cleanup()
                 self.logger.debug("系统托盘资源已清理")
             
-            # 清理Profile管理器
+            # 最后清理Profile管理器（确保WebView先被清理）
+            if hasattr(self, 'web_view') and self.web_view:
+                try:
+                    self.web_view.page().deleteLater()
+                    self.web_view.deleteLater()
+                    self.logger.debug("WebView资源已清理")
+                except Exception as e:
+                    self.logger.warning(f"清理WebView资源失败: {e}")
+            
             if hasattr(self, 'profile_manager') and self.profile_manager:
-                self.profile_manager.close()
-                self.logger.debug("Profile管理器已清理")
+                try:
+                    self.profile_manager.close()
+                    self.logger.debug("Profile管理器已清理")
+                except Exception as e:
+                    self.logger.warning(f"清理Profile管理器失败: {e}")
             
             log_webview_event("window_close", "", True, "程序关闭完成，资源清理完成")
             
