@@ -217,7 +217,9 @@ class ProfileManager:
                 # 检查是否是正常的空文件类型
                 is_normal_empty = any(suffix in file_name for suffix in normal_empty_files)
                 
-                if not is_normal_empty and file_size < 100:
+                # 调整阈值：只有小于10字节的非空文件才被视为异常
+                # 这样可以避免对正常配置文件（如user_prefs.json）的误报
+                if not is_normal_empty and file_size < 10:
                     tiny_files.append(file_name)
             
             if tiny_files:
