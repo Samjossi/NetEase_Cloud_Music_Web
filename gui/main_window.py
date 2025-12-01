@@ -429,9 +429,9 @@ class NetEaseMusicWindow(QMainWindow):
         """验证 localStorage 配置和音量设置"""
         try:
             # 延迟执行，确保页面完全加载
-            # 增加延迟时间，并添加多次重试机制
+            # 增加延迟时间到5秒，给页面更多时间初始化
             self._localStorage_retry_count = 0
-            QTimer.singleShot(3000, self._check_localstorage_and_volume)
+            QTimer.singleShot(5000, self._check_localstorage_and_volume)
         except Exception as e:
             self.logger.error(f"验证 localStorage 和音量设置失败: {e}")
     
@@ -533,14 +533,14 @@ class NetEaseMusicWindow(QMainWindow):
             
             self._localStorage_retry_count += 1
             
-            if self._localStorage_retry_count <= 3:
+            if self._localStorage_retry_count <= 2:
                 # 重试，延迟递增
-                delay = 2000 * self._localStorage_retry_count  # 2秒, 4秒, 6秒
-                self.logger.warning(f"localStorage 检查失败（第{self._localStorage_retry_count}次重试）: {error_msg}")
+                delay = 2000 * self._localStorage_retry_count  # 2秒, 4秒
+                self.logger.debug(f"localStorage 检查失败（第{self._localStorage_retry_count}次重试）: {error_msg}")
                 QTimer.singleShot(delay, self._check_localstorage_and_volume)
             else:
-                # 超过重试次数，记录警告但不再重试
-                self.logger.warning(f"localStorage 检查最终失败（已重试{self._localStorage_retry_count-1}次）: {error_msg}")
+                # 超过重试次数，记录信息但不再重试
+                self.logger.info(f"localStorage 检查最终失败（已重试{self._localStorage_retry_count-1}次）: {error_msg}")
                 self.logger.info("localStorage 功能可能不可用，但应用仍可正常运行")
                 
         except Exception as e:
