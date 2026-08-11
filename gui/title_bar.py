@@ -47,6 +47,9 @@ TitleBar QToolButton {{
 TitleBar QToolButton:hover {{
     background: {hover};
 }}
+TitleBar QToolButton#closeButton {{
+    font-size: 18px;   /* "×" 字形偏小，放大与 "—"/"□" 视觉对齐 */
+}}
 TitleBar QToolButton#closeButton:hover {{
     background: {close_hover};
     color: #ffffff;
