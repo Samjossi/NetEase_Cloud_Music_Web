@@ -62,6 +62,9 @@ def main():
         app_logger.warning(f"异常退出守卫初始化失败: {e}")
     
     try:
+        # 钉死 WM_CLASS 的 instance 字段（取自 argv[0] 主名），必须先于 QApplication 创建
+        # 否则打包形态改变 argv[0] 时 instance 漂移，与 desktop 文件 StartupWMClass 失配 → 任务栏齿轮
+        sys.argv[0] = "netease-music-desktop"
         # 创建应用实例
         app = QApplication(sys.argv)
         app_logger.info("创建QApplication实例")
@@ -74,28 +77,26 @@ def main():
             else:
                 base_path = os.getcwd()
             
-            # Linux桌面环境推荐的图标尺寸顺序（针对GNOME优化）
+            # 多尺寸注册：Qt按场景（标题栏/任务栏/Alt-Tab）自动挑选最近尺寸，杜绝单图缩放糊边
             icon_paths = [
-                "icon/icon_48x48.png",    # GNOME任务栏标准尺寸
-                "icon/icon_64x64.png",    # 标准桌面图标尺寸
-                "icon/icon_32x32.png",    # 小尺寸图标
-                "icon/icon_128x128.png",  # 高DPI显示器
-                "icon/icon_24x24.png",    # 小型托盘/面板
-                "icon/icon_16x16.png",    # 极小尺寸
-                "icon/icon_256x256.png"   # 超高分辨率
+                "icon/icon_16x16.png",
+                "icon/icon_24x24.png",
+                "icon/icon_32x32.png",
+                "icon/icon_48x48.png",
+                "icon/icon_64x64.png",
+                "icon/icon_128x128.png",
+                "icon/icon_256x256.png"
             ]
             
-            app_icon = None
+            app_icon = QIcon()
             for icon_path in icon_paths:
                 full_path = os.path.join(base_path, icon_path)
                 if os.path.exists(full_path):
-                    app_icon = QIcon(full_path)
-                    app_logger.info(f"设置应用程序图标: {full_path}")
-                    break
+                    app_icon.addFile(full_path)
             
-            if app_icon and not app_icon.isNull():
+            if not app_icon.isNull():
                 app.setWindowIcon(app_icon)
-                app_logger.info("应用程序图标设置成功")
+                app_logger.info("应用程序图标设置成功（多尺寸注册）")
             else:
                 app_logger.warning("未找到合适的应用程序图标文件")
                 
@@ -105,6 +106,8 @@ def main():
         # 设置应用信息
         app.setOrganizationName("NetEase")
         app.setOrganizationDomain("netease.com")
+        # 钉死 WM_CLASS 的 class 字段（instance 字段已在 QApplication 创建前通过 argv[0] 钉死）
+        app.setApplicationName("netease-music-desktop")
         
         # 设置GNOME兼容的窗口类名（WM_CLASS）
         app.setDesktopFileName("netease-music-desktop")
