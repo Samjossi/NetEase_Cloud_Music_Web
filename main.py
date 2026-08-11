@@ -136,6 +136,13 @@ def main():
         except Exception as e:
             app_logger.warning(f"移除运行标记失败: {e}")
         
+        # 清理PipeWire全局管理器单例
+        try:
+            from pipewire_manager import cleanup_pipewire_manager
+            cleanup_pipewire_manager()
+        except Exception as e:
+            app_logger.warning(f"清理PipeWire管理器失败: {e}")
+        
         # 清理Profile管理器
         cleanup_profile_manager()
         

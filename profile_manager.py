@@ -690,8 +690,8 @@ class ProfileManager:
             # 如果启用，重新计算下次重启时间
             if enabled:
                 current_time = time.time()
-                interval_hours = config["restart_interval_hours"]
-                next_restart_time = current_time + (interval_hours * 3600)
+                interval_minutes = config.get("restart_interval_minutes", 90)
+                next_restart_time = current_time + (interval_minutes * 60)
                 config["next_restart_timestamp"] = next_restart_time
                 self.logger.info(f"PipeWire自动重启已启用，下次重启时间: {next_restart_time}")
             else:
@@ -709,7 +709,7 @@ class ProfileManager:
         """获取PipeWire重启间隔（小时）"""
         try:
             config = self.load_pipewire_config()
-            return config.get("restart_interval_hours", 1.0)
+            return config.get("restart_interval_minutes", 90) / 60
         except Exception as e:
             self.logger.error(f"获取PipeWire重启间隔失败: {e}")
             return 1.0
@@ -719,14 +719,15 @@ class ProfileManager:
         try:
             # 限制间隔范围
             interval_hours = max(0.5, min(24.0, interval_hours))
+            interval_minutes = int(interval_hours * 60)
             
             config = self.load_pipewire_config()
-            config["restart_interval_hours"] = interval_hours
+            config["restart_interval_minutes"] = interval_minutes
             
             # 重新计算下次重启时间
             if config.get("auto_restart_enabled", False):
                 current_time = time.time()
-                next_restart_time = current_time + (interval_hours * 3600)
+                next_restart_time = current_time + (interval_minutes * 60)
                 config["next_restart_timestamp"] = next_restart_time
                 self.logger.info(f"PipeWire重启间隔已更新: {interval_hours}小时, 下次重启: {next_restart_time}")
             

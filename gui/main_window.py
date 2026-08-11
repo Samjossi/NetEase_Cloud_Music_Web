@@ -791,6 +791,14 @@ class NetEaseMusicWindow(QMainWindow):
                 except Exception as e:
                     self.logger.warning(f"备份数据时出错: {e}")
             
+            # 清理PipeWire集成资源（停止其内部QTimer，防止泄漏）
+            if hasattr(self, 'pipewire_integration') and self.pipewire_integration:
+                try:
+                    self.pipewire_integration.cleanup()
+                    self.logger.debug("PipeWire集成资源已清理")
+                except Exception as e:
+                    self.logger.warning(f"清理PipeWire集成资源失败: {e}")
+
             # 清理托盘资源
             if hasattr(self, 'tray_manager') and self.tray_manager:
                 self.tray_manager.cleanup()
