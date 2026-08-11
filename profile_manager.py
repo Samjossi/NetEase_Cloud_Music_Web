@@ -26,12 +26,7 @@ class ProfileManager:
         self.logger = get_logger("profile_manager")
         
         # 优先使用环境变量，否则使用用户目录
-        if storage_path is None:
-            storage_path = os.environ.get('NETEASE_LOGIN_DATA_PATH')
-            if storage_path is None:
-                storage_path = os.path.expanduser("~/.local/share/netease-music/login_data")
-        
-        self.storage_path = os.path.abspath(storage_path)
+        self.storage_path = resolve_storage_path(storage_path)
         self.profile: Optional[QWebEngineProfile] = None
         self._ensure_storage_directory()
         
@@ -821,6 +816,78 @@ class ProfileManager:
             self.logger.info("Profile管理器已关闭")
         except Exception as e:
             self.logger.error(f"关闭Profile管理器失败: {e}")
+
+
+# === 异常退出守卫 ===
+# 原理：启动时创建运行标记，正常退出时删除。
+# 若启动时发现标记残留，说明上次为异常退出（崩溃/强杀），
+# 此时GPU缓存可能已写入脏数据，清理后由Chromium重建，杜绝崩溃循环。
+RUNNING_MARK_FILE = ".netease_running"
+GPU_CACHE_DIRS = ("GPUCache", "DawnGraphiteCache", "DawnWebGPUCache")
+
+
+def resolve_storage_path(storage_path: Optional[str] = None) -> str:
+    """解析Profile存储路径，与ProfileManager默认取值逻辑一致"""
+    if storage_path is None:
+        storage_path = os.environ.get('NETEASE_LOGIN_DATA_PATH')
+        if storage_path is None:
+            storage_path = os.path.expanduser("~/.local/share/netease-music/login_data")
+    return os.path.abspath(storage_path)
+
+
+def check_abnormal_exit_and_recover(storage_path: Optional[str] = None) -> bool:
+    """检测上次是否异常退出，若是则清理GPU相关缓存目录。
+
+    必须在QtWebEngine初始化（创建主窗口）之前调用，否则清理时机太晚。
+    仅清理GPU_CACHE_DIRS白名单目录，严禁触碰Cookies等登录态数据。
+    返回是否检测到了异常退出。
+    """
+    import shutil
+    logger = get_logger("profile_manager")
+    mark_path = os.path.join(resolve_storage_path(storage_path), RUNNING_MARK_FILE)
+
+    if not os.path.exists(mark_path):
+        return False
+
+    cleaned = []
+    for dir_name in GPU_CACHE_DIRS:
+        dir_path = os.path.join(os.path.dirname(mark_path), dir_name)
+        if not os.path.isdir(dir_path):
+            continue
+        try:
+            shutil.rmtree(dir_path)
+            cleaned.append(dir_name)
+        except Exception as e:
+            logger.warning(f"清理GPU缓存目录失败 {dir_name}: {e}")
+
+    if cleaned:
+        logger.info(f"检测到上次异常退出，已清理GPU缓存: {', '.join(cleaned)}")
+    else:
+        logger.info("检测到上次异常退出，GPU缓存目录不存在，无需清理")
+    return True
+
+
+def create_running_mark(storage_path: Optional[str] = None) -> None:
+    """创建运行标记文件，内容为启动时间，供排查用"""
+    logger = get_logger("profile_manager")
+    try:
+        mark_path = os.path.join(resolve_storage_path(storage_path), RUNNING_MARK_FILE)
+        os.makedirs(os.path.dirname(mark_path), exist_ok=True)
+        with open(mark_path, 'w', encoding='utf-8') as f:
+            f.write(time.strftime("%Y-%m-%d %H:%M:%S"))
+    except Exception as e:
+        logger.warning(f"创建运行标记失败: {e}")
+
+
+def remove_running_mark(storage_path: Optional[str] = None) -> None:
+    """正常退出时删除运行标记文件"""
+    logger = get_logger("profile_manager")
+    try:
+        mark_path = os.path.join(resolve_storage_path(storage_path), RUNNING_MARK_FILE)
+        if os.path.exists(mark_path):
+            os.remove(mark_path)
+    except Exception as e:
+        logger.warning(f"删除运行标记失败: {e}")
 
 
 # 全局Profile管理器实例

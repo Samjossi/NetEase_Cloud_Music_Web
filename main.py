@@ -39,6 +39,28 @@ def main():
         app_logger = logging.getLogger("main")
         app_logger.warning("使用基本日志系统作为后备")
     
+    # 原生崩溃留痕：SIGSEGV等硬崩溃时faulthandler将Python线程栈写入crash.log
+    try:
+        import faulthandler
+        os.makedirs("logs", exist_ok=True)
+        _crash_log = open("logs/crash.log", "a", buffering=1)
+        faulthandler.enable(_crash_log)
+    except Exception as e:
+        app_logger.warning(f"启用崩溃留痕失败: {e}")
+    
+    # 异常退出守卫：上次异常退出则清理GPU缓存，随后创建运行标记
+    # 必须在QtWebEngine初始化（创建主窗口）之前完成
+    try:
+        from profile_manager import (
+            check_abnormal_exit_and_recover,
+            create_running_mark,
+            remove_running_mark
+        )
+        check_abnormal_exit_and_recover()
+        create_running_mark()
+    except Exception as e:
+        app_logger.warning(f"异常退出守卫初始化失败: {e}")
+    
     try:
         # 创建应用实例
         app = QApplication(sys.argv)
@@ -107,6 +129,12 @@ def main():
         # 运行应用
         app_logger.info("开始运行应用主循环")
         result = app.exec()
+        
+        # 正常退出，移除运行标记（最小化到托盘不会走到这里）
+        try:
+            remove_running_mark()
+        except Exception as e:
+            app_logger.warning(f"移除运行标记失败: {e}")
         
         # 清理Profile管理器
         cleanup_profile_manager()
