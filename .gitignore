@@ -28,3 +28,7 @@ packaging_01/dish/
 **/logs/
 **/build_logs/
 **/temp/
+
+# 项目临时目录（含预防性拼写变体）
+.temp/
+.tep/
