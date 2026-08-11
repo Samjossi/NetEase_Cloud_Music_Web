@@ -16,6 +16,7 @@ from typing import Optional, Dict, Any
 from PySide6.QtWebEngineCore import QWebEngineProfile
 from PySide6.QtWidgets import QApplication
 
+from version import __version__ as APP_VERSION
 from logger import get_logger
 
 
@@ -330,7 +331,7 @@ class ProfileManager:
                 "geometry": geometry_b64,
                 "maximized": maximized,
                 "last_saved": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "version": "1.0"
+                "version": APP_VERSION
             }
             
             # 原子写入，避免文件损坏
@@ -420,7 +421,7 @@ class ProfileManager:
             preferences_path = self.get_user_preferences_path()
             
             # 添加版本信息和时间戳
-            preferences["version"] = "1.0"
+            preferences["version"] = APP_VERSION
             preferences["last_updated"] = time.strftime("%Y-%m-%d %H:%M:%S")
             
             # 原子写入，避免文件损坏
@@ -469,7 +470,7 @@ class ProfileManager:
                 "remember_choice": False,
                 "first_time": True
             },
-            "version": "1.0"
+            "version": APP_VERSION
         }
     
     def update_close_behavior(self, action: str, remember_choice: bool = False) -> bool:
@@ -508,7 +509,7 @@ class ProfileManager:
             config_path = self.get_pipewire_config_path()
             
             # 添加版本信息和时间戳
-            config["version"] = "1.0"
+            config["version"] = APP_VERSION
             config["last_updated"] = time.strftime("%Y-%m-%d %H:%M:%S")
             
             # 验证配置
@@ -589,7 +590,7 @@ class ProfileManager:
             "show_notifications": True,  # 默认显示通知
             "last_restart_timestamp": 0.0,
             "restart_command": "systemctl --user restart pipewire",
-            "version": "1.0"
+            "version": APP_VERSION
         }
     
     def update_pipewire_restart_time(self, restart_timestamp: float) -> bool:

@@ -1,6 +1,6 @@
 [project]
 name = "netease-cloud-music-web"
-version = "0.1.0"
+version = "1.0"
 description = "网易云音乐桌面版 - 基于PySide6的Web音乐播放器"
 readme = "README.md"
 requires-python = ">=3.12"

@@ -26,6 +26,7 @@ icon_dir = os.path.join(project_root, 'icon')
 # ---- 数据文件：仅运行期按路径加载的图标（见 main.py base_path 逻辑）----
 datas = [
     (icon_dir, 'icon'),
+    (os.path.join(project_root, 'pyproject.toml'), '.'),
 ]
 
 # ---- 隐藏导入 ----
