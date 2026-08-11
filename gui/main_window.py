@@ -6,8 +6,8 @@
 
 import os
 import time
-from PySide6.QtWidgets import QMainWindow
-from PySide6.QtCore import QUrl, QTimer
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout
+from PySide6.QtCore import QUrl, QTimer, Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEnginePage
@@ -19,6 +19,8 @@ from tray_manager import TrayManager, is_tray_supported, get_tray_backend
 from pipewire_manager_integration import PipeWireManagerIntegration
 from gui.close_confirm_dialog import show_close_confirm_dialog
 from gui.settings_dialog import show_settings_dialog
+from gui.title_bar import TitleBar
+from gui.window_resize import EdgeResizeController
 
 
 class NetEaseMusicWindow(QMainWindow):
@@ -29,6 +31,9 @@ class NetEaseMusicWindow(QMainWindow):
         
         # 初始化窗口状态管理
         self.window_save_timer = None  # 延迟保存定时器
+        
+        # 无边框化：保留 Window 类型标志，任务栏/Alt-Tab/最小化行为不变
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint)
         
         self.init_ui()
         self.setup_webview_monitoring()
@@ -67,9 +72,19 @@ class NetEaseMusicWindow(QMainWindow):
             self.web_view.setUrl(QUrl(music_url))
             log_webview_event("load_url", music_url, True, "开始加载网易云音乐播放器")
             
-            # 设置为中心控件
-            self.setCentralWidget(self.web_view)
-            self.logger.debug("设置WebView为中心控件")
+            # 中央容器：自上而下 [TitleBar][QWebEngineView]，零边距零间距
+            central = QWidget()
+            outer = QVBoxLayout(central)
+            outer.setContentsMargins(0, 0, 0, 0)
+            outer.setSpacing(0)
+            self.title_bar = TitleBar(self)
+            outer.addWidget(self.title_bar)
+            outer.addWidget(self.web_view)
+            self.setCentralWidget(central)
+            self.logger.debug("设置中央容器（标题栏+WebView）为中央控件")
+            
+            # 安装八向边缘缩放控制器（无边框化后原生热区消失，自绘补齐）
+            self._resize_controller = EdgeResizeController(self)
             
             # 设置窗口图标
             try:
