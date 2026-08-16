@@ -805,6 +805,100 @@ class ProfileManager:
         except Exception:
             return "时间格式化失败"
 
+    def get_volume_compensation_config_path(self) -> str:
+        """获取音量补偿配置文件路径"""
+        return os.path.join(self.storage_path, "volume_compensation_config.json")
+
+    def save_volume_compensation_config(self, config: Dict[str, Any]) -> bool:
+        """保存音量补偿配置"""
+        try:
+            config_path = self.get_volume_compensation_config_path()
+
+            # 添加版本信息和时间戳
+            config["version"] = APP_VERSION
+            config["last_updated"] = time.strftime("%Y-%m-%d %H:%M:%S")
+
+            # 验证配置
+            validated_config = self._validate_volume_compensation_config(config)
+
+            # 原子写入，避免文件损坏
+            temp_path = config_path + ".tmp"
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json.dump(validated_config, f, indent=2, ensure_ascii=False)
+
+            os.replace(temp_path, config_path)
+
+            self.logger.debug(f"音量补偿配置已保存: {config_path}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"保存音量补偿配置失败: {e}")
+            return False
+
+    def load_volume_compensation_config(self) -> Dict[str, Any]:
+        """加载音量补偿配置"""
+        try:
+            config_path = self.get_volume_compensation_config_path()
+
+            if not os.path.exists(config_path):
+                self.logger.debug("音量补偿配置文件不存在，返回默认配置")
+                return self._get_default_volume_compensation_config()
+
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+
+            # 验证配置完整性
+            validated_config = self._validate_volume_compensation_config(config)
+
+            self.logger.debug(f"音量补偿配置加载成功，最后更新: {config.get('last_updated', 'unknown')}")
+            return validated_config
+
+        except Exception as e:
+            self.logger.error(f"加载音量补偿配置失败: {e}")
+            return self._get_default_volume_compensation_config()
+
+    def _validate_volume_compensation_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """验证音量补偿配置"""
+        try:
+            default_config = self._get_default_volume_compensation_config()
+            validated_config = default_config.copy()
+
+            # 验证并更新配置项
+            if "enabled" in config:
+                validated_config["enabled"] = bool(config["enabled"])
+
+            if "k" in config:
+                k = float(config["k"])
+                # 限制补偿指数在0.2到1.0之间，1.0等效于不补偿
+                validated_config["k"] = max(0.2, min(1.0, k))
+
+            if "scale" in config:
+                scale = float(config["scale"])
+                # 限制振幅缩放系数在0.01到1.0之间，1.0等效于不缩放
+                validated_config["scale"] = max(0.01, min(1.0, scale))
+
+            # 保留元信息
+            for meta_key in ("version", "last_updated"):
+                if meta_key in config:
+                    validated_config[meta_key] = config[meta_key]
+
+            return validated_config
+
+        except Exception as e:
+            self.logger.error(f"验证音量补偿配置失败: {e}")
+            return self._get_default_volume_compensation_config()
+
+    def _get_default_volume_compensation_config(self) -> Dict[str, Any]:
+        """获取默认音量补偿配置"""
+        return {
+            "enabled": True,  # 默认启用，false 时行为与现状完全一致（回退路径）
+            "k": 0.5,  # 补偿指数 h(v)=m·v^k，k<1 抬高低段，1.0 等效于不补偿
+            # 振幅缩放系数 m：压低曲线下限，让滑块低段有下调余量。
+            # 实测锚定：滑块30档响度 ≈ 旧曲线1档响度，m=0.3 时上限够用
+            "scale": 0.3,
+            "version": APP_VERSION
+        }
+
     def get_profile(self) -> Optional[QWebEngineProfile]:
         """获取Profile实例"""
         return self.profile

@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout
 from PySide6.QtCore import QUrl, QTimer, Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWebEngineCore import QWebEnginePage
+from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineScript
 
 # 导入日志系统和相关管理器
 from logger import get_logger, log_login_operation, log_webview_event
@@ -66,7 +66,10 @@ class NetEaseMusicWindow(QMainWindow):
             
             # 添加增强的登录数据监控
             self.setup_enhanced_login_monitor()
-            
+
+            # 注册音量线性化补偿脚本（必须在 setUrl 之前，确保先于页面脚本执行）
+            self._register_volume_compensation_script(page)
+
             # 加载网易云音乐播放器
             music_url = "https://music.163.com/st/webplayer"
             self.web_view.setUrl(QUrl(music_url))
@@ -311,6 +314,53 @@ class NetEaseMusicWindow(QMainWindow):
             self.logger.error(f"设置增强登录监控失败: {e}")
             log_login_operation("setup_monitor", "enhanced", False, str(e))
     
+    def _register_volume_compensation_script(self, page: QWebEnginePage):
+        """注册音量线性化补偿脚本（方案A：prototype 劫持 + 补偿曲线）
+
+        通过 QWebEngineScript 在 DocumentCreation 时机注入 MainWorld，
+        保证先于页面任何脚本执行，劫持对所有动态创建的音频元素生效。
+        """
+        try:
+            vc_config = self.profile_manager.load_volume_compensation_config()
+
+            if not vc_config.get("enabled", True):
+                self.logger.info("音量线性化补偿已禁用（volume_compensation.enabled=false），跳过脚本注册")
+                return
+
+            k = vc_config.get("k", 0.5)
+            m = vc_config.get("scale", 0.3)
+
+            # 定位注入脚本（兼容 PyInstaller 打包路径）
+            import sys
+            if hasattr(sys, '_MEIPASS'):
+                base_path = sys._MEIPASS
+            else:
+                base_path = os.getcwd()
+            js_path = os.path.join(base_path, "gui", "volume_compensation.js")
+
+            with open(js_path, 'r', encoding='utf-8') as f:
+                js_source = f.read()
+
+            # 在脚本头部写入 k、m 初始值；运行时可经 runJavaScript 热更新
+            # window.__NC_VOLUME_K / window.__NC_VOLUME_M
+            source = f"window.__NC_VOLUME_K = {k};\nwindow.__NC_VOLUME_M = {m};\n" + js_source
+
+            script = QWebEngineScript()
+            script.setName("volume_compensation")
+            script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentCreation)
+            script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
+            # 播放器音频在主框架；若验证发现播放器嵌在 iframe，改为 True
+            script.setRunsOnSubFrames(False)
+            script.setSourceCode(source)
+
+            page.scripts().insert(script)
+            self.logger.info(f"音量线性化补偿脚本注册成功（k={k}, m={m}）")
+            log_webview_event("volume_compensation_register", "", True, f"补偿脚本注册成功，k={k}, m={m}")
+
+        except Exception as e:
+            self.logger.error(f"注册音量线性化补偿脚本失败: {e}", exc_info=True)
+            log_webview_event("volume_compensation_register", "", False, f"补偿脚本注册失败: {e}")
+
     def enhanced_login_check(self):
         """增强的登录状态检查"""
         try:
@@ -447,8 +497,54 @@ class NetEaseMusicWindow(QMainWindow):
             # 增加延迟时间到5秒，给页面更多时间初始化
             self._localStorage_retry_count = 0
             QTimer.singleShot(5000, self._check_localstorage_and_volume)
+
+            # 验证音量补偿劫持安装状态（补偿脚本在 DocumentCreation 注入，此刻应已生效）
+            QTimer.singleShot(2000, self._check_volume_compensation_status)
         except Exception as e:
             self.logger.error(f"验证 localStorage 和音量设置失败: {e}")
+
+    def _check_volume_compensation_status(self):
+        """检查音量线性化补偿劫持是否安装成功"""
+        try:
+            if not hasattr(self, 'profile_manager') or not self.profile_manager:
+                return
+            if not self.profile_manager.load_volume_compensation_config().get("enabled", True):
+                return
+
+            # 注意：runJavaScript 对 JS 对象字面量的序列化不可靠（实测返回空串），
+            # 必须返回 JSON 字符串后在 Python 侧解析
+            js_code = """
+            (function() {
+                try {
+                    return JSON.stringify({
+                        installed: window.__NC_VOLUME_COMPENSATION_INSTALLED === true,
+                        k: (typeof window.__NC_VOLUME_K === 'number') ? window.__NC_VOLUME_K : null,
+                        m: (typeof window.__NC_VOLUME_M === 'number') ? window.__NC_VOLUME_M : null
+                    });
+                } catch (e) {
+                    return JSON.stringify({installed: false, k: null, m: null, error: String(e)});
+                }
+            })();
+            """
+
+            def on_result(result):
+                try:
+                    import json as _json
+                    data = _json.loads(result) if isinstance(result, str) else None
+                    if data and data.get("installed"):
+                        self.logger.info(f"✓ 音量线性化补偿劫持已生效（k={data.get('k')}, m={data.get('m')}）")
+                        log_webview_event("volume_compensation_status", "", True, "劫持安装状态确认生效")
+                    else:
+                        detail = data.get("error") if data else f"返回值异常: {result!r}"
+                        self.logger.warning(f"⚠ 音量线性化补偿劫持未生效（{detail}），音量调节行为与现状一致（无破坏性）")
+                        log_webview_event("volume_compensation_status", "", False, f"劫持安装状态未生效: {detail}")
+                except Exception as e:
+                    self.logger.error(f"处理音量补偿状态检查结果失败: {e}")
+
+            self.web_view.page().runJavaScript(js_code, on_result)
+
+        except Exception as e:
+            self.logger.error(f"检查音量补偿劫持状态失败: {e}")
     
     def _check_localstorage_and_volume(self):
         """检查 localStorage 和音量设置"""

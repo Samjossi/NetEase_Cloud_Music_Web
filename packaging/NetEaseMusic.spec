@@ -24,9 +24,11 @@ project_root = os.path.dirname(os.path.abspath(SPECPATH))
 icon_dir = os.path.join(project_root, 'icon')
 
 # ---- 数据文件：仅运行期按路径加载的图标（见 main.py base_path 逻辑）----
+# gui/volume_compensation.js 为音量补偿注入脚本，运行期按路径读取，需显式打包
 datas = [
     (icon_dir, 'icon'),
     (os.path.join(project_root, 'pyproject.toml'), '.'),
+    (os.path.join(project_root, 'gui', 'volume_compensation.js'), 'gui'),
 ]
 
 # ---- 隐藏导入 ----
